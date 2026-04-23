@@ -11,12 +11,87 @@ import {
   ShieldCheck,
   Zap
 } from 'lucide-react';
+import axios from 'axios';
+import toast from 'react-hot-toast';
+import { signInWithGoogle } from '../../firebase';
+
+const API_URL = 'http://localhost:5000/api/auth';
 
 const Login = () => {
   const [showPassword, setShowPassword] = useState(false);
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [isLogin, setIsLogin] = useState(true);
+  const [loading, setLoading] = useState(false);
+
+  // Handle Email Login
+  const handleLogin = async (e) => {
+    e.preventDefault();
+    if (!email || !password) {
+      toast.error('Please fill in all fields');
+      return;
+    }
+    setLoading(true);
+    try {
+      const res = await axios.post(`${API_URL}/login`, { email, password });
+      localStorage.setItem('token', res.data.token);
+      localStorage.setItem('user', JSON.stringify(res.data.user));
+      toast.success('Login successful! Welcome back.');
+      // TODO: Navigate to dashboard
+    } catch (err) {
+      toast.error(err.response?.data?.msg || 'Login failed');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Handle Email Signup
+  const handleSignup = async (e) => {
+    e.preventDefault();
+    if (!email || !password) {
+      toast.error('Please fill in all fields');
+      return;
+    }
+    if (password.length < 6) {
+      toast.error('Password must be at least 6 characters');
+      return;
+    }
+    setLoading(true);
+    try {
+      const res = await axios.post(`${API_URL}/signup`, { email, password });
+      localStorage.setItem('token', res.data.token);
+      localStorage.setItem('user', JSON.stringify(res.data.user));
+      toast.success('Account created successfully!');
+      // TODO: Navigate to dashboard
+    } catch (err) {
+      toast.error(err.response?.data?.msg || 'Signup failed');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Handle Google Sign In
+  const handleGoogleSignIn = async () => {
+    setLoading(true);
+    try {
+      const googleUser = await signInWithGoogle();
+      // Send Google user info to our backend to create/find user
+      const res = await axios.post(`${API_URL}/google`, {
+        email: googleUser.email,
+        uid: googleUser.uid,
+      });
+      localStorage.setItem('token', res.data.token);
+      localStorage.setItem('user', JSON.stringify(res.data.user));
+      toast.success(`Welcome, ${googleUser.displayName || googleUser.email}!`);
+      // TODO: Navigate to dashboard
+    } catch (err) {
+      toast.error(err.response?.data?.msg || 'Google sign-in failed');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleSubmit = isLogin ? handleLogin : handleSignup;
 
   return (
     <div className="min-h-screen w-full flex flex-col md:flex-row font-sans overflow-hidden bg-white">
@@ -25,7 +100,7 @@ const Login = () => {
         initial={{ x: -100, opacity: 0 }}
         animate={{ x: 0, opacity: 1 }}
         transition={{ duration: 0.8, ease: "easeOut" }}
-        className="hidden md:flex md:w-[55%] lg:w-[50%] indigo-gradient p-12 flex-col justify-between relative"
+        className="hidden md:flex md:w-[45%] lg:w-[40%] shrink-0 indigo-gradient p-12 flex-col justify-between relative"
       >
         {/* Background Decorative Elements */}
         <div className="absolute top-0 left-0 w-full h-full overflow-hidden pointer-events-none opacity-20">
@@ -94,7 +169,7 @@ const Login = () => {
           initial={{ opacity: 0, scale: 0.95 }}
           animate={{ opacity: 1, scale: 1 }}
           transition={{ duration: 0.5 }}
-          className="w-full max-w-[1050px] glass-card rounded-3xl p-6 md:p-10 relative z-10 shadow-2xl shadow-indigo-900/5"
+          className="w-full max-w-[750px] glass-card rounded-3xl p-6 md:p-10 relative z-10 shadow-2xl shadow-indigo-900/5"
         >
           <div className="text-center mb-8">
             <h2 className="text-3xl md:text-4xl font-bold text-slate-800 mb-2 font-outfit">
@@ -121,7 +196,11 @@ const Login = () => {
             </button>
           </div>
 
-          <button className="w-full py-3.5 px-4 bg-white border border-slate-200 rounded-xl flex items-center justify-center gap-3 text-slate-700 font-semibold hover:bg-slate-50 transition-all duration-300 shadow-sm hover:shadow-md mb-8 group">
+          <button 
+            onClick={handleGoogleSignIn}
+            disabled={loading}
+            className="w-full py-3.5 px-4 bg-white border border-slate-200 rounded-xl flex items-center justify-center gap-3 text-slate-700 font-semibold hover:bg-slate-50 transition-all duration-300 shadow-sm hover:shadow-md mb-8 group disabled:opacity-60 disabled:cursor-not-allowed"
+          >
             <img src="https://www.google.com/favicon.ico" alt="Google" className="h-5 w-5 group-hover:scale-110 transition-transform duration-300" />
             <span>{isLogin ? "Sign in with Google" : "Sign up with Google"}</span>
           </button>
@@ -134,7 +213,7 @@ const Login = () => {
             <div className="h-[1px] flex-1 bg-slate-200" />
           </div>
 
-          <form onSubmit={(e) => e.preventDefault()} className="space-y-5">
+          <form onSubmit={handleSubmit} className="space-y-5">
             <div className="space-y-1.5">
               <label 
                 htmlFor="email" 
@@ -199,14 +278,16 @@ const Login = () => {
             )}
 
             <motion.button 
+              type="submit"
+              disabled={loading}
               whileHover={{ scale: 1.01, translateY: -2 }}
               whileTap={{ scale: 0.98 }}
-              className="w-full py-3.5 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl font-bold shadow-xl shadow-indigo-600/20 flex items-center justify-center gap-2 transition-all duration-300 relative overflow-hidden group"
+              className="w-full py-3.5 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl font-bold shadow-xl shadow-indigo-600/20 flex items-center justify-center gap-2 transition-all duration-300 relative overflow-hidden group disabled:opacity-60 disabled:cursor-not-allowed"
             >
               <span className="z-10 group-hover:translate-x-[-1px] transition-transform duration-300">
-                {isLogin ? "Enter Dashboard" : "Register Agency"}
+                {loading ? 'Please wait...' : (isLogin ? "Enter Dashboard" : "Register Agency")}
               </span>
-              <ArrowRight className="z-10 group-hover:translate-x-[4px] transition-transform duration-300" size={18}/>
+              {!loading && <ArrowRight className="z-10 group-hover:translate-x-[4px] transition-transform duration-300" size={18}/>}
               <div className="absolute top-0 left-[-100%] w-full h-full bg-gradient-to-r from-transparent via-white/10 to-transparent group-hover:left-[100%] transition-all duration-1000 ease-in-out" />
             </motion.button>
           </form>
