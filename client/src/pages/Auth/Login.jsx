@@ -13,6 +13,7 @@ import {
 } from 'lucide-react';
 import axios from 'axios';
 import toast from 'react-hot-toast';
+import { useNavigate } from 'react-router-dom';
 import { signInWithGoogle } from '../../firebase';
 
 const API_URL = 'http://localhost:5000/api/auth';
@@ -23,6 +24,7 @@ const Login = () => {
   const [password, setPassword] = useState('');
   const [isLogin, setIsLogin] = useState(true);
   const [loading, setLoading] = useState(false);
+  const navigate = useNavigate();
 
   // Handle Email Login
   const handleLogin = async (e) => {
@@ -37,7 +39,7 @@ const Login = () => {
       localStorage.setItem('token', res.data.token);
       localStorage.setItem('user', JSON.stringify(res.data.user));
       toast.success('Login successful! Welcome back.');
-      // TODO: Navigate to dashboard
+      navigate('/dashboard');
     } catch (err) {
       toast.error(err.response?.data?.msg || 'Login failed');
     } finally {
@@ -62,7 +64,7 @@ const Login = () => {
       localStorage.setItem('token', res.data.token);
       localStorage.setItem('user', JSON.stringify(res.data.user));
       toast.success('Account created successfully!');
-      // TODO: Navigate to dashboard
+      navigate('/dashboard');
     } catch (err) {
       toast.error(err.response?.data?.msg || 'Signup failed');
     } finally {
@@ -83,7 +85,7 @@ const Login = () => {
       localStorage.setItem('token', res.data.token);
       localStorage.setItem('user', JSON.stringify(res.data.user));
       toast.success(`Welcome, ${googleUser.displayName || googleUser.email}!`);
-      // TODO: Navigate to dashboard
+      navigate('/dashboard');
     } catch (err) {
       toast.error(err.response?.data?.msg || 'Google sign-in failed');
     } finally {
