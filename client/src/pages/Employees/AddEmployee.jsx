@@ -6,11 +6,11 @@ import {
   User, Mail, Briefcase, Calendar, DollarSign, Percent, AlertCircle 
 } from 'lucide-react';
 import Layout from '../../components/Layout/Layout';
-import api from '../../config/axios';
-import toast from 'react-hot-toast';
+import useEmployees from '../../hooks/useEmployees';
 
 const AddEmployee = () => {
   const navigate = useNavigate();
+  const { addEmployee } = useEmployees();
   const [loading, setLoading] = useState(false);
   const [errors, setErrors] = useState({});
   const [formData, setFormData] = useState({
@@ -52,18 +52,11 @@ const AddEmployee = () => {
     if (!validate()) return;
     
     setLoading(true);
-    try {
-      await api.post('/employees', {
-        ...formData,
-        baseSalary: Number(formData.baseSalary),
-        taxPercent: Number(formData.taxPercent)
-      });
-      toast.success('Employee added successfully!');
+    const success = await addEmployee(formData);
+    setLoading(false);
+    
+    if (success) {
       navigate('/employees');
-    } catch (err) {
-      toast.error(err.response?.data?.message || err.response?.data?.msg || 'Failed to add employee');
-    } finally {
-      setLoading(false);
     }
   };
 
