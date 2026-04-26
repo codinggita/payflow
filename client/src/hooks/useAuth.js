@@ -1,7 +1,9 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import authService from '../services/authService';
-import { signInWithGoogle } from '../firebase';
+import { auth, provider as googleProvider } from '../firebase';
+import { signInWithPopup } from 'firebase/auth';
+import api from '../config/axios';
 
 const useAuth = () => {
   const [loading, setLoading] = useState(false);
@@ -48,12 +50,29 @@ const useAuth = () => {
     setLoading(true);
     setError(null);
     try {
-      const googleUser = await signInWithGoogle();
-      const data = await authService.googleLogin(googleUser.email, googleUser.uid);
-      localStorage.setItem('token', data.token);
-      localStorage.setItem('user', JSON.stringify(data.user));
+      const result = await signInWithPopup(auth, googleProvider);
+      const idToken = await result.user.getIdToken();
+      
+      // POST /api/auth/google -> { idToken }
+      // Included extra fields to ensure compatibility with backend
+      const response = await api.post('/auth/google', { 
+        idToken,
+        email: result.user.email,
+        uid: result.user.uid,
+        name: result.user.displayName,
+        avatar: result.user.photoURL
+      });
+      const data = response.data;
+
+      localStorage.setItem("token", data.token);
+      localStorage.setItem("user", JSON.stringify({
+        name: result.user.displayName,
+        email: result.user.email,
+        avatar: result.user.photoURL,
+        id: data.user?.id || result.user.uid
+      }));
       navigate('/dashboard');
-      return { data, googleUser };
+      return { data, googleUser: result.user };
     } catch (err) {
       const message = err.response?.data?.msg || err.message || 'Google sign-in failed';
       setError(message);

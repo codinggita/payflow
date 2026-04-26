@@ -45,7 +45,7 @@ router.post('/signup', async (req, res) => {
       { expiresIn: '30d' }, // 30 days
       (err, token) => {
         if (err) throw err;
-        res.json({ token, user: { id: user.id, email: user.email } });
+        res.json({ token, user: { id: user.id, email: user.email, name: user.name, avatar: user.avatar } });
       }
     );
   } catch (err) {
@@ -94,7 +94,7 @@ router.post('/login', async (req, res) => {
       { expiresIn: '30d' },
       (err, token) => {
         if (err) throw err;
-        res.json({ token, user: { id: user.id, email: user.email } });
+        res.json({ token, user: { id: user.id, email: user.email, name: user.name, avatar: user.avatar } });
       }
     );
   } catch (err) {
@@ -106,7 +106,7 @@ router.post('/login', async (req, res) => {
 // Google Auth Route
 router.post('/google', async (req, res) => {
   try {
-    const { email, uid } = req.body;
+    const { email, uid, name, avatar } = req.body;
 
     if (!email) {
       return res.status(400).json({ msg: 'Google authentication failed' });
@@ -120,8 +120,24 @@ router.post('/google', async (req, res) => {
       user = new User({
         email,
         isGoogleAuth: true,
+        name,
+        avatar,
       });
       await user.save();
+    } else {
+      // Update existing user if missing profile info
+      let updated = false;
+      if (name && !user.name) {
+        user.name = name;
+        updated = true;
+      }
+      if (avatar && !user.avatar) {
+        user.avatar = avatar;
+        updated = true;
+      }
+      if (updated) {
+        await user.save();
+      }
     }
 
     // Create JWT
@@ -137,7 +153,7 @@ router.post('/google', async (req, res) => {
       { expiresIn: '30d' },
       (err, token) => {
         if (err) throw err;
-        res.json({ token, user: { id: user.id, email: user.email } });
+        res.json({ token, user: { id: user.id, email: user.email, name: user.name, avatar: user.avatar } });
       }
     );
   } catch (err) {

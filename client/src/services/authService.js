@@ -11,8 +11,8 @@ const authService = {
     return response.data;
   },
   
-  googleLogin: async (email, uid) => {
-    const response = await api.post('/auth/google', { email, uid });
+  googleLogin: async (email, uid, name, avatar) => {
+    const response = await api.post('/auth/google', { email, uid, name, avatar });
     return response.data;
   }
 };

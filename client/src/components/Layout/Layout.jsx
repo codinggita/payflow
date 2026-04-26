@@ -19,6 +19,13 @@ const Layout = ({ children }) => {
   const navigate = useNavigate();
   const location = useLocation();
 
+  const userStr = localStorage.getItem('user');
+  const user = userStr ? JSON.parse(userStr) : null;
+  const userName = user?.name || 'User Account';
+  const userEmail = user?.email || 'admin@payflow.com';
+  const avatarSeed = user?.name || user?.email || 'User Account';
+  const avatarUrl = user?.avatar || `https://ui-avatars.com/api/?name=${encodeURIComponent(avatarSeed)}&background=random`;
+
   const handleLogout = () => {
     localStorage.removeItem('token');
     localStorage.removeItem('user');
@@ -120,10 +127,10 @@ const Layout = ({ children }) => {
               
               <div className="flex items-center gap-3 cursor-pointer">
                 <div className="text-right">
-                  <p className="text-sm font-bold text-slate-800">Alex Mercer</p>
-                  <p className="text-[10px] text-slate-500 uppercase tracking-wider font-semibold">Head of Finance</p>
+                  <p className="text-sm font-bold text-slate-800">{userName}</p>
+                  <p className="text-[10px] text-slate-500 uppercase tracking-wider font-semibold">{userEmail}</p>
                 </div>
-                <img src="https://api.dicebear.com/7.x/avataaars/svg?seed=Alex" alt="Avatar" className="w-10 h-10 rounded-full border-2 border-indigo-100 bg-indigo-50" />
+                <img src={avatarUrl} alt="Avatar" className="w-10 h-10 rounded-full border-2 border-indigo-100 bg-indigo-50 object-cover" />
               </div>
             </div>
           </div>
