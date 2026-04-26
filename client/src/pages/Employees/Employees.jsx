@@ -9,8 +9,8 @@ import Layout from '../../components/Layout/Layout';
 import useEmployees from '../../hooks/useEmployees';
 
 const Employees = () => {
-  const { employees, loading, fetchEmployees, removeEmployee } = useEmployees();
-  const [filters, setFilters] = useState({ search: '', department: '', status: '' });
+  const { employees, pagination, loading, fetchEmployees, removeEmployee } = useEmployees();
+  const [filters, setFilters] = useState({ search: '', department: '', status: '', page: 1 });
 
   // Debounced fetch
   useEffect(() => {
@@ -45,7 +45,7 @@ const Employees = () => {
             type="text" 
             placeholder="Filter by name, role or email..." 
             value={filters.search}
-            onChange={(e) => setFilters(prev => ({ ...prev, search: e.target.value }))}
+            onChange={(e) => setFilters(prev => ({ ...prev, search: e.target.value, page: 1 }))}
             className="w-full pl-11 pr-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:bg-white transition-all"
           />
         </div>
@@ -55,7 +55,7 @@ const Employees = () => {
           <select 
             className="appearance-none pl-11 pr-10 py-3 bg-slate-50 border border-slate-200 hover:bg-white text-slate-600 rounded-xl font-semibold text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500/20 cursor-pointer transition-colors"
             value={filters.department}
-            onChange={(e) => setFilters(prev => ({ ...prev, department: e.target.value }))}
+            onChange={(e) => setFilters(prev => ({ ...prev, department: e.target.value, page: 1 }))}
           >
             <option value="">All Departments</option>
             <option value="Engineering">Engineering</option>
@@ -73,7 +73,7 @@ const Employees = () => {
           <select 
             className="appearance-none pl-11 pr-10 py-3 bg-slate-50 border border-slate-200 hover:bg-white text-slate-600 rounded-xl font-semibold text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500/20 cursor-pointer transition-colors"
             value={filters.status}
-            onChange={(e) => setFilters(prev => ({ ...prev, status: e.target.value }))}
+            onChange={(e) => setFilters(prev => ({ ...prev, status: e.target.value, page: 1 }))}
           >
             <option value="">All Statuses</option>
             <option value="Active">Active</option>
@@ -167,18 +167,32 @@ const Employees = () => {
           ))}
         </div>
 
-        <div className="px-8 py-5 border-t border-slate-100 flex items-center justify-between bg-white relative z-20">
-          <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">SHOWING {employees.length} EMPLOYEES</p>
-          <div className="flex items-center gap-2">
-            <button className="w-8 h-8 flex items-center justify-center rounded-full border border-slate-200 text-slate-400 hover:bg-slate-50 transition-colors">
-              <ChevronLeft size={14} />
-            </button>
-            <button className="w-8 h-8 flex items-center justify-center rounded-full bg-indigo-500 text-white font-bold text-xs shadow-sm shadow-indigo-500/30">1</button>
-            <button className="w-8 h-8 flex items-center justify-center rounded-full border border-slate-200 text-slate-600 hover:bg-slate-50 transition-colors">
-              <ChevronRight size={14} />
-            </button>
+        {pagination.totalEmployees > 0 && (
+          <div className="px-8 py-5 border-t border-slate-100 flex items-center justify-between bg-white relative z-20">
+            <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">
+              SHOWING {(pagination.currentPage - 1) * 10 + 1}-{Math.min(pagination.currentPage * 10, pagination.totalEmployees)} OF {pagination.totalEmployees} EMPLOYEES
+            </p>
+            <div className="flex items-center gap-2">
+              <button 
+                onClick={() => setFilters(prev => ({ ...prev, page: Math.max(1, prev.page - 1) }))}
+                disabled={pagination.currentPage === 1}
+                className="w-8 h-8 flex items-center justify-center rounded-full border border-slate-200 text-slate-400 hover:bg-slate-50 transition-colors disabled:opacity-50 disabled:hover:bg-transparent"
+              >
+                <ChevronLeft size={14} />
+              </button>
+              <button className="w-8 h-8 flex items-center justify-center rounded-full bg-indigo-500 text-white font-bold text-xs shadow-sm shadow-indigo-500/30">
+                {pagination.currentPage}
+              </button>
+              <button 
+                onClick={() => setFilters(prev => ({ ...prev, page: Math.min(pagination.totalPages, prev.page + 1) }))}
+                disabled={pagination.currentPage === pagination.totalPages || pagination.totalPages === 0}
+                className="w-8 h-8 flex items-center justify-center rounded-full border border-slate-200 text-slate-600 hover:bg-slate-50 transition-colors disabled:opacity-50 disabled:hover:bg-transparent"
+              >
+                <ChevronRight size={14} />
+              </button>
+            </div>
           </div>
-        </div>
+        )}
       </div>
 
       {/* Summary Cards */}
