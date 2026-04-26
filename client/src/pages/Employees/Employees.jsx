@@ -1,5 +1,6 @@
 import React from 'react';
 import { motion } from 'framer-motion';
+import { Link } from 'react-router-dom';
 import { Search, Plus, MoreVertical, ChevronLeft, ChevronRight, Briefcase, ChevronDown, Filter, TrendingUp } from 'lucide-react';
 import Layout from '../../components/Layout/Layout';
 
@@ -18,9 +19,9 @@ const Employees = () => {
           <h1 className="text-4xl font-bold text-slate-800 font-outfit mb-2">Employee Directory</h1>
           <p className="text-slate-500 font-medium text-sm">Manage your atelier's talent and organizational structure.</p>
         </div>
-        <button className="px-6 py-3 bg-indigo-500 hover:bg-indigo-600 text-white rounded-xl font-semibold flex items-center justify-center gap-2 transition-colors shadow-md shadow-indigo-500/20 text-sm">
+        <Link to="/employees/new" className="px-6 py-3 bg-indigo-500 hover:bg-indigo-600 text-white rounded-xl font-semibold flex items-center justify-center gap-2 transition-colors shadow-md shadow-indigo-500/20 text-sm">
           <Plus size={18} /> Add New Employee
-        </button>
+        </Link>
       </div>
 
       <div className="flex gap-4 mb-6">

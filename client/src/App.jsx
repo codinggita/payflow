@@ -3,6 +3,7 @@ import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import Login from './pages/Auth/Login';
 import Dashboard from './pages/Dashboard/Dashboard';
 import Employees from './pages/Employees/Employees';
+import AddEmployee from './pages/Employees/AddEmployee';
 import { Toaster } from 'react-hot-toast';
 
 const ProtectedRoute = ({ children }) => {
@@ -32,6 +33,14 @@ function App() {
           element={
             <ProtectedRoute>
               <Employees />
+            </ProtectedRoute>
+          } 
+        />
+        <Route 
+          path="/employees/new" 
+          element={
+            <ProtectedRoute>
+              <AddEmployee />
             </ProtectedRoute>
           } 
         />
