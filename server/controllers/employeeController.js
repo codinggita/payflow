@@ -17,7 +17,7 @@ exports.getAllEmployees = async (req, res) => {
     if (status) query.status = status;
 
     const skip = (parseInt(page) - 1) * parseInt(limit);
-    const employees = await Employee.find(query).skip(skip).limit(parseInt(limit));
+    const employees = await Employee.find(query).sort({ createdAt: -1 }).skip(skip).limit(parseInt(limit));
     
     // Return total count for pagination
     const total = await Employee.countDocuments(query);

@@ -4,6 +4,11 @@ import toast from 'react-hot-toast';
 
 const useEmployees = () => {
   const [employees, setEmployees] = useState([]);
+  const [pagination, setPagination] = useState({
+    currentPage: 1,
+    totalPages: 1,
+    totalEmployees: 0
+  });
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
 
@@ -15,11 +20,15 @@ const useEmployees = () => {
       if (filters.search) queryParams.append('search', filters.search);
       if (filters.department) queryParams.append('department', filters.department);
       if (filters.status) queryParams.append('status', filters.status);
+      if (filters.page) queryParams.append('page', filters.page);
 
       const response = await api.get(`/employees?${queryParams.toString()}`);
-      // The backend returns { employees: [...], totalPages, currentPage, totalEmployees }
-      // We'll set the employees array into state.
       setEmployees(response.data.employees || []);
+      setPagination({
+        currentPage: response.data.currentPage || 1,
+        totalPages: response.data.totalPages || 1,
+        totalEmployees: response.data.totalEmployees || 0
+      });
     } catch (err) {
       const message = err.response?.data?.message || err.response?.data?.msg || 'Failed to fetch employees';
       setError(message);
@@ -72,6 +81,7 @@ const useEmployees = () => {
 
   return {
     employees,
+    pagination,
     loading,
     error,
     fetchEmployees,

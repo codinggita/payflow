@@ -7,11 +7,15 @@ import {
 } from 'lucide-react';
 import Layout from '../../components/Layout/Layout';
 import useEmployees from '../../hooks/useEmployees';
+import toast from 'react-hot-toast';
 
 const AddEmployee = () => {
   const navigate = useNavigate();
   const { addEmployee } = useEmployees();
   const [loading, setLoading] = useState(false);
+  const [avatarUrl, setAvatarUrl] = useState('');
+  const [avatarLoading, setAvatarLoading] = useState(false);
+  const fileInputRef = React.useRef(null);
   const [errors, setErrors] = useState({});
   const [formData, setFormData] = useState({
     name: '',
@@ -47,12 +51,49 @@ const AddEmployee = () => {
     return Object.keys(newErrors).length === 0;
   };
 
+  const handleAvatarUpload = async (file) => {
+    if (!file) return;
+    
+    setAvatarLoading(true);
+    const uploadData = new FormData();
+    uploadData.append('file', file);
+    uploadData.append('upload_preset', import.meta.env.VITE_CLOUDINARY_UPLOAD_PRESET);
+
+    try {
+      const response = await fetch(
+        `https://api.cloudinary.com/v1_1/${import.meta.env.VITE_CLOUDINARY_CLOUD_NAME}/image/upload`,
+        {
+          method: 'POST',
+          body: uploadData,
+        }
+      );
+      
+      const data = await response.json();
+      
+      if (response.ok) {
+        setAvatarUrl(data.secure_url);
+        toast.success('Avatar uploaded!');
+      } else {
+        throw new Error(data.error?.message || 'Upload failed');
+      }
+    } catch (err) {
+      toast.error(err.message || 'Upload failed!');
+      console.error('Cloudinary Upload Error:', err);
+    } finally {
+      setAvatarLoading(false);
+    }
+  };
+
   const handleSubmit = async (e) => {
     e.preventDefault();
     if (!validate()) return;
     
     setLoading(true);
-    const success = await addEmployee(formData);
+    const finalData = {
+      ...formData,
+      avatar: avatarUrl || `https://ui-avatars.com/api/?name=${encodeURIComponent(formData.name)}&background=random`
+    };
+    const success = await addEmployee(finalData);
     setLoading(false);
     
     if (success) {
@@ -83,12 +124,42 @@ const AddEmployee = () => {
            <form onSubmit={handleSubmit}>
               <div className="mb-10">
                 <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-3">Employee Avatar</label>
-                <div className="border-2 border-dashed border-indigo-200 rounded-2xl bg-[#F8FAFC] p-8 flex flex-col items-center justify-center cursor-pointer hover:bg-indigo-50 transition-colors">
-                  <div className="w-14 h-14 bg-white rounded-full shadow-sm flex items-center justify-center text-indigo-500 mb-4 border border-indigo-50">
-                    <UploadCloud size={24} />
-                  </div>
-                  <p className="text-sm font-bold text-slate-700">Click to upload or drag and drop</p>
-                  <p className="text-[11px] text-slate-400 font-medium mt-1">PNG, JPG or SVG (max. 800x800px)</p>
+                <div 
+                  className="border-2 border-dashed border-indigo-200 rounded-2xl bg-[#F8FAFC] p-8 flex flex-col items-center justify-center cursor-pointer hover:bg-indigo-50 transition-colors"
+                  onClick={() => fileInputRef.current?.click()}
+                  onDragOver={(e) => e.preventDefault()}
+                  onDrop={(e) => {
+                    e.preventDefault();
+                    if (e.dataTransfer.files && e.dataTransfer.files[0]) {
+                      handleAvatarUpload(e.dataTransfer.files[0]);
+                    }
+                  }}
+                >
+                  {avatarLoading ? (
+                    <div className="flex flex-col items-center">
+                      <div className="w-14 h-14 bg-white rounded-full shadow-sm flex items-center justify-center text-indigo-500 mb-4 border border-indigo-50">
+                        <UploadCloud size={24} className="animate-pulse" />
+                      </div>
+                      <p className="text-sm font-bold text-slate-700">Uploading...</p>
+                    </div>
+                  ) : avatarUrl ? (
+                    <img src={avatarUrl} alt="Avatar preview" className="w-24 h-24 rounded-full mx-auto object-cover shadow-sm border-4 border-white" />
+                  ) : (
+                    <>
+                      <div className="w-14 h-14 bg-white rounded-full shadow-sm flex items-center justify-center text-indigo-500 mb-4 border border-indigo-50">
+                        <UploadCloud size={24} />
+                      </div>
+                      <p className="text-sm font-bold text-slate-700">Click to upload or drag and drop</p>
+                      <p className="text-[11px] text-slate-400 font-medium mt-1">PNG, JPG or SVG (max. 800x800px)</p>
+                    </>
+                  )}
+                  <input 
+                    type="file" 
+                    ref={fileInputRef} 
+                    className="hidden" 
+                    accept="image/*" 
+                    onChange={(e) => handleAvatarUpload(e.target.files[0])} 
+                  />
                 </div>
               </div>
 
