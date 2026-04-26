@@ -8,15 +8,17 @@ const app = express();
 const authRoutes = require('./routes/auth');
 const employeeRoutes = require('./routes/employeeRoutes');
 const dashboardRoutes = require('./routes/dashboardRoutes');
+const payrollRoutes = require('./routes/payrollRoutes');
 
 // Middleware
 app.use(cors());
 app.use(express.json());
 
-// Routes
+// Mount Routes
 app.use('/api/auth', authRoutes);
 app.use('/api/employees', employeeRoutes);
 app.use('/api/dashboard', dashboardRoutes);
+app.use('/api/payroll', payrollRoutes);
 
 // Connect to MongoDB
 mongoose.connect(process.env.MONGO_URI)
