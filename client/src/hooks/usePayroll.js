@@ -52,6 +52,23 @@ const usePayroll = () => {
     }
   };
 
+  const fetchPayrollByMonth = async (month, year) => {
+    setLoading(true);
+    setError(null);
+    try {
+      const response = await api.get(`/payroll/filter?month=${month}&year=${year}`);
+      setPayrollData(response.data);
+    } catch (err) {
+      if (err.response?.status === 404) {
+        setPayrollData(null); // Or getDefaultPayroll()
+      } else {
+        toast.error('Failed to fetch payroll for selected month');
+      }
+    } finally {
+      setLoading(false);
+    }
+  };
+
   const fetchPayrollHistory = async () => {
     try {
       const response = await api.get('/payroll/history');
@@ -61,12 +78,12 @@ const usePayroll = () => {
     }
   };
 
-  const processMonthlyPayroll = async () => {
+  const processMonthlyPayroll = async (period = {}) => {
     setProcessing(true);
     try {
-      const response = await api.post('/payroll/process', {});
+      const response = await api.post('/payroll/process', period);
       setPayrollData(response.data);
-      toast.success('Payroll processed successfully!');
+      toast.success(`Payroll for ${response.data.month} processed successfully!`);
     } catch (err) {
       toast.error(err.response?.data?.msg || err.response?.data?.message || 'Failed to process payroll');
     } finally {
@@ -155,6 +172,7 @@ const usePayroll = () => {
     updateEmployeeSalary,
     updateEmployeePayrollFields,
     fetchPayrollHistory,
+    fetchPayrollByMonth,
     payrollHistory,
     getDefaultPayroll,
   };
