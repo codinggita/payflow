@@ -110,6 +110,28 @@ exports.getCurrentPayroll = async (req, res) => {
   }
 };
 
+// GET /api/payroll/filter?month=May&year=2026
+exports.getPayrollByMonth = async (req, res) => {
+  try {
+    const { month, year } = req.query;
+    
+    if (!month || !year) {
+      return res.status(400).json({ msg: 'Month and Year are required' });
+    }
+
+    const payroll = await Payroll.findOne({ month, year: parseInt(year) });
+    
+    if (!payroll) {
+      return res.status(404).json({ msg: 'No payroll records found for this month.' });
+    }
+
+    res.json(payroll);
+  } catch (err) {
+    console.error(err.message);
+    res.status(500).send('Server Error');
+  }
+};
+
 // GET /api/payroll/history
 exports.getPayrollHistory = async (req, res) => {
   try {

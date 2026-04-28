@@ -12,89 +12,38 @@ import {
   Pencil,
   Check,
   X,
-  FileBarChart
+  FileBarChart,
+  Calendar,
+  Search,
+  ChevronDown,
+  Clock,
+  ExternalLink
 } from 'lucide-react';
 import Layout from '../../components/Layout/Layout';
 import usePayroll from '../../hooks/usePayroll';
 
 /* ─── Formatters ─────────────────────────────────────────── */
 const formatCurrency = (amount) =>
-  new Intl.NumberFormat('en-US', {
+  new Intl.NumberFormat('en-IN', {
     style: 'currency',
-    currency: 'USD',
-    minimumFractionDigits: 2,
+    currency: 'INR',
+    minimumFractionDigits: 0,
   }).format(amount || 0);
 
-const formatDeduction = (amount) => `(${formatCurrency(amount)})`;
+const formatDeduction = (amount) => `-${formatCurrency(amount)}`;
 
 const formatDate = (date) => {
-  if (!date) return 'May 15';
-  return new Date(date).toLocaleString('en-US', { month: 'short', day: 'numeric' });
+  if (!date) return 'TBD';
+  return new Date(date).toLocaleString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
 };
 
-/* ─── Reusable inline-edit cell ──────────────────────────── */
-const EditCell = ({
-  value,
-  displayNode,
-  isEditing,
-  isSaving,
-  canEdit,
-  onStart,
-  onSave,
-  onCancel,
-  editValue,
-  setEditValue,
-}) => {
-  if (isEditing) {
-    return (
-      <div className="flex items-center justify-center gap-1">
-        <input
-          type="number"
-          min="0"
-          step="0.01"
-          value={editValue}
-          onChange={(e) => setEditValue(e.target.value)}
-          className="w-20 text-xs border border-indigo-300 rounded-lg px-2 py-1 text-center focus:outline-none focus:ring-2 focus:ring-indigo-400"
-          autoFocus
-          onKeyDown={(e) => {
-            if (e.key === 'Enter') onSave();
-            if (e.key === 'Escape') onCancel();
-          }}
-        />
-        <button
-          onClick={onSave}
-          disabled={isSaving}
-          className="w-5 h-5 flex items-center justify-center rounded-md bg-emerald-500 hover:bg-emerald-600 text-white disabled:opacity-50 transition-colors"
-          title="Save"
-        >
-          {isSaving ? <Loader2 size={10} className="animate-spin" /> : <Check size={10} />}
-        </button>
-        <button
-          onClick={onCancel}
-          className="w-5 h-5 flex items-center justify-center rounded-md bg-slate-200 hover:bg-slate-300 text-slate-600 transition-colors"
-          title="Cancel"
-        >
-          <X size={10} />
-        </button>
-      </div>
-    );
-  }
+/* ─── Constants ──────────────────────────────────────────── */
+const MONTHS = [
+  'January', 'February', 'March', 'April', 'May', 'June',
+  'July', 'August', 'September', 'October', 'November', 'December'
+];
 
-  return (
-    <div className="flex items-center justify-center gap-1 group">
-      {displayNode}
-      {canEdit && (
-        <button
-          onClick={onStart}
-          className="w-5 h-5 flex items-center justify-center rounded-md bg-white shadow-sm border border-slate-200 text-slate-400 hover:text-indigo-500 hover:border-indigo-300 transition-all opacity-0 group-hover:opacity-100"
-          title="Edit"
-        >
-          <Pencil size={10} />
-        </button>
-      )}
-    </div>
-  );
-};
+const YEARS = [2024, 2025, 2026];
 
 /* ─── Main Component ─────────────────────────────────────── */
 const Payroll = () => {
@@ -104,19 +53,27 @@ const Payroll = () => {
     processing,
     processMonthlyPayroll,
     updateEmployeeStatus,
-    updateEmployeeDeduction,
-    updateEmployeeBonus,
-    updateEmployeeSalary,
     updateEmployeePayrollFields,
+    fetchPayrollByMonth,
     fetchPayrollHistory,
     payrollHistory,
     getDefaultPayroll,
   } = usePayroll();
 
-  const data      = payrollData || getDefaultPayroll();
-  const payrollId = payrollData?._id;
+  const now = new Date();
+  const [selectedMonth, setSelectedMonth] = useState(MONTHS[now.getMonth()]);
+  const [selectedYear, setSelectedYear] = useState(now.getFullYear());
+  const [searchTerm, setSearchTerm] = useState('');
 
-  const [activeView, setActiveView] = useState('directory'); // 'directory' | 'history'
+  // Local data or default
+  const data = payrollData || {
+    ...getDefaultPayroll(),
+    month: selectedMonth,
+    year: selectedYear,
+    employees: []
+  };
+  
+  const payrollId = payrollData?._id;
 
   // Row-level edit modal state
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
@@ -127,51 +84,18 @@ const Payroll = () => {
     deductions: ''
   });
   const [isModalSaving, setIsModalSaving] = useState(false);
-
-  // { empId: string, field: 'salary'|'deduction'|'bonus' } | null
-  const [editState, setEditState] = useState(null);
-  const [editValue, setEditValue] = useState('');
-  const [savingKey, setSavingKey] = useState(null); // `${empId}-${field}`
   const [payingId, setPayingId]   = useState(null);
 
-  const startEdit = (emp, field) => {
-    const empId = emp.employeeId || emp._id;
-    const valueMap = { salary: emp.baseSalary, deduction: emp.deductions, bonus: emp.bonus };
-    setEditState({ empId, field });
-    setEditValue(String(valueMap[field] ?? 0));
-  };
-
-  const cancelEdit = () => {
-    setEditState(null);
-    setEditValue('');
-  };
-
-  const handleSave = async (emp) => {
-    if (!payrollId || !editState) return;
-    const key = `${editState.empId}-${editState.field}`;
-    setSavingKey(key);
-    const empId = emp.employeeId;
-    switch (editState.field) {
-      case 'salary':    await updateEmployeeSalary(payrollId, empId, editValue);    break;
-      case 'deduction': await updateEmployeeDeduction(payrollId, empId, editValue); break;
-      case 'bonus':     await updateEmployeeBonus(payrollId, empId, editValue);     break;
-    }
-    setSavingKey(null);
-    setEditState(null);
-  };
-
-  const handlePay = async (emp) => {
-    const empId = emp.employeeId || emp._id;
-    if (!payrollId) return;
-    setPayingId(empId);
-    await updateEmployeeStatus(payrollId, emp.employeeId, 'Paid');
-    setPayingId(null);
-  };
   useEffect(() => {
-    if (activeView === 'history') {
-      fetchPayrollHistory();
-    }
-  }, [activeView]);
+    fetchPayrollByMonth(selectedMonth, selectedYear);
+    fetchPayrollHistory();
+  }, [selectedMonth, selectedYear]);
+
+  const handleProcessPayroll = async () => {
+    // We pass selectedMonth/Year to process specifically for them
+    await processMonthlyPayroll({ month: selectedMonth, year: selectedYear });
+    fetchPayrollHistory();
+  };
 
   const openEditModal = (emp) => {
     setEditingEmployee(emp);
@@ -201,404 +125,291 @@ const Payroll = () => {
       });
       closeEditModal();
     } catch (err) {
-      // toast handled in hook
+      // handled in hook
     } finally {
       setIsModalSaving(false);
     }
   };
 
-  if (loading) {
-    return (
-      <Layout>
-        <div className="flex items-center justify-center h-64">
-          <Loader2 className="w-8 h-8 text-indigo-600 animate-spin" />
-        </div>
-      </Layout>
-    );
-  }
+  const handlePay = async (emp) => {
+    const empId = emp.employeeId || emp._id;
+    if (!payrollId) return;
+    setPayingId(empId);
+    await updateEmployeeStatus(payrollId, emp.employeeId, 'Paid');
+    setPayingId(null);
+  };
+
+  const filteredEmployees = data.employees.filter(emp => 
+    emp.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    emp.role.toLowerCase().includes(searchTerm.toLowerCase())
+  );
+
+  const getStatusStyle = (status) => {
+    switch (status) {
+      case 'Paid': return 'bg-emerald-50 text-emerald-600 border-emerald-100';
+      case 'Processing': return 'bg-indigo-50 text-indigo-600 border-indigo-100';
+      default: return 'bg-amber-50 text-amber-600 border-amber-100';
+    }
+  };
 
   return (
     <Layout>
-      {/* ── Tabs ── */}
-      <div className="flex gap-8 mb-8 border-b border-slate-200">
-        <button
-          onClick={() => setActiveView('directory')}
-          className={`pb-4 text-sm font-bold tracking-wider uppercase transition-all relative ${
-            activeView === 'directory' ? 'text-indigo-600' : 'text-slate-400 hover:text-slate-600'
-          }`}
-        >
-          Directory
-          {activeView === 'directory' && (
-            <motion.div layoutId="activeTab" className="absolute bottom-0 left-0 right-0 h-0.5 bg-indigo-600" />
-          )}
-        </button>
-        <button
-          onClick={() => setActiveView('history')}
-          className={`pb-4 text-sm font-bold tracking-wider uppercase transition-all relative ${
-            activeView === 'history' ? 'text-indigo-600' : 'text-slate-400 hover:text-slate-600'
-          }`}
-        >
-          History
-          {activeView === 'history' && (
-            <motion.div layoutId="activeTab" className="absolute bottom-0 left-0 right-0 h-0.5 bg-indigo-600" />
-          )}
-        </button>
-      </div>
-
-      {activeView === 'directory' ? (
-        <>
-          {/* ── Header ── */}
-          <div className="flex justify-between items-end mb-8">
-            <motion.div initial={{ y: 20, opacity: 0 }} animate={{ y: 0, opacity: 1 }}>
-              <p className="text-[10px] font-bold text-indigo-600 uppercase tracking-widest mb-1">Financial Cycle</p>
-              <h1 className="text-3xl font-bold text-slate-800 font-outfit">{data.month} Payroll</h1>
-            </motion.div>
-            <motion.div
-              initial={{ y: 20, opacity: 0 }} animate={{ y: 0, opacity: 1 }} transition={{ delay: 0.1 }}
-              className="bg-slate-50 border border-slate-200 px-6 py-4 rounded-2xl text-right shadow-sm"
-            >
-              <p className="text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-1">Estimated Outflow</p>
-              <h2 className="text-2xl font-bold text-slate-800 font-outfit">{formatCurrency(data.estimatedOutflow)}</h2>
-            </motion.div>
-          </div>
-
-      {/* ── Stat Cards ── */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
-        <motion.div
-          initial={{ y: 20, opacity: 0 }} animate={{ y: 0, opacity: 1 }} transition={{ delay: 0.2 }}
-          className="bg-white rounded-3xl p-6 shadow-sm border border-slate-100 flex items-center justify-between"
-        >
-          <div>
-            <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1">Total Salary</p>
-            <h3 className="text-2xl font-bold text-slate-800 font-outfit">{formatCurrency(data.totalSalary)}</h3>
-          </div>
-          <div className="w-12 h-12 bg-indigo-50 text-indigo-600 rounded-2xl flex items-center justify-center"><Wallet size={20} /></div>
-        </motion.div>
-
-        <motion.div
-          initial={{ y: 20, opacity: 0 }} animate={{ y: 0, opacity: 1 }} transition={{ delay: 0.3 }}
-          className="bg-white rounded-3xl p-6 shadow-sm border border-slate-100 flex items-center justify-between"
-        >
-          <div>
-            <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1">Total Deductions</p>
-            <h3 className="text-2xl font-bold text-red-500 font-outfit">{formatDeduction(data.totalDeductions)}</h3>
-          </div>
-          <div className="w-12 h-12 bg-red-50 text-red-500 rounded-2xl flex items-center justify-center"><MinusCircle size={20} /></div>
-        </motion.div>
-
-        <motion.div
-          initial={{ y: 20, opacity: 0 }} animate={{ y: 0, opacity: 1 }} transition={{ delay: 0.4 }}
-          className="bg-white rounded-3xl p-6 shadow-sm border border-slate-100 flex items-center justify-between relative overflow-hidden"
-        >
-          <div className="absolute right-0 top-0 w-32 h-32 bg-indigo-50 rounded-bl-full -z-0" />
-          <div className="relative z-10">
-            <p className="text-[10px] font-bold text-indigo-600 uppercase tracking-widest mb-1">Net Payroll</p>
-            <h3 className="text-2xl font-bold text-slate-800 font-outfit">{formatCurrency(data.netPayroll)}</h3>
-          </div>
-          <div className="w-12 h-12 bg-indigo-600 text-white rounded-2xl flex items-center justify-center relative z-10 shadow-lg shadow-indigo-600/30">
-            <Banknote size={20} />
-          </div>
-        </motion.div>
-      </div>
-
-      {/* ── Table Header Row ── */}
-      <div className="mb-6 flex justify-between items-center">
-        <h3 className="text-xl font-bold text-slate-800 font-outfit">Employee Remuneration</h3>
-        <div className="flex gap-2">
-          <button className="w-10 h-10 flex items-center justify-center rounded-xl bg-white shadow-sm text-slate-400 hover:text-slate-600 transition-colors"><Filter size={16} /></button>
-          <button className="w-10 h-10 flex items-center justify-center rounded-xl bg-white shadow-sm text-slate-400 hover:text-slate-600 transition-colors"><Download size={16} /></button>
-        </div>
-      </div>
-
-      <div className="mb-10">
-        {/* Column labels */}
-        <div className="px-8 flex text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-4">
-          <div className="w-[26%]">Employee</div>
-          <div className="w-[14%] text-center">Base Salary</div>
-          <div className="w-[15%] text-center">Deductions</div>
-          <div className="w-[12%] text-center">Bonus</div>
-          <div className="w-[12%] text-center">Net Pay</div>
-          <div className="w-[21%] text-right pr-2">Status / Action</div>
-        </div>
-
-        {/* Rows */}
-        <div className="space-y-3">
-          {!(data.employees && data.employees.length) ? (
-            <div className="bg-white px-8 py-6 rounded-[2rem] shadow-sm text-center text-sm text-slate-400">
-              No employees in payroll yet. Click{' '}
-              <span className="font-bold text-indigo-500">Process Payroll</span> to begin.
-            </div>
-          ) : (
-            data.employees.map((emp, idx) => {
-              const empKey  = emp.employeeId || emp._id || String(idx);
-              const isPaid  = emp.status === 'Paid';
-              const canEdit = !!payrollId && !isPaid;
-
-              const isEditingSalary    = editState?.empId === empKey && editState?.field === 'salary';
-              const isEditingDeduction = editState?.empId === empKey && editState?.field === 'deduction';
-              const isEditingBonus     = editState?.empId === empKey && editState?.field === 'bonus';
-
-              const isSavingSalary    = savingKey === `${empKey}-salary`;
-              const isSavingDeduction = savingKey === `${empKey}-deduction`;
-              const isSavingBonus     = savingKey === `${empKey}-bonus`;
-              const isPaying          = payingId === empKey;
-
-              return (
-                <motion.div
-                  key={emp._id || idx}
-                  initial={{ y: 20, opacity: 0 }}
-                  animate={{ y: 0, opacity: 1 }}
-                  transition={{ delay: 0.35 + idx * 0.06 }}
-                  className="bg-white px-8 py-4 rounded-[2rem] shadow-sm flex items-center"
-                >
-                  {/* Employee info */}
-                  <div className="w-[26%] flex items-center gap-3">
-                    <img
-                      src={`https://api.dicebear.com/7.x/avataaars/svg?seed=${emp.avatar || emp._id}`}
-                      alt={emp.name}
-                      className="w-10 h-10 rounded-full bg-slate-100 border border-slate-200 shrink-0"
-                    />
-                    <div>
-                      <p className="text-sm font-bold text-slate-800">{emp.name}</p>
-                      <p className={`text-[9px] font-bold uppercase tracking-wider ${emp.status === 'Error' ? 'text-red-500' : 'text-slate-400'}`}>
-                        {emp.role}
-                      </p>
-                    </div>
-                  </div>
-
-                  {/* Base Salary */}
-                  <div className="w-[14%]">
-                    <EditCell
-                      isEditing={isEditingSalary}
-                      isSaving={isSavingSalary}
-                      canEdit={canEdit}
-                      editValue={editValue}
-                      setEditValue={setEditValue}
-                      onStart={() => startEdit(emp, 'salary')}
-                      onSave={() => handleSave(emp)}
-                      onCancel={cancelEdit}
-                      displayNode={
-                        <p className="text-xs font-bold text-slate-600">{formatCurrency(emp.baseSalary)}</p>
-                      }
-                    />
-                  </div>
-
-                  {/* Deductions */}
-                  <div className="w-[15%]">
-                    <EditCell
-                      isEditing={isEditingDeduction}
-                      isSaving={isSavingDeduction}
-                      canEdit={canEdit}
-                      editValue={editValue}
-                      setEditValue={setEditValue}
-                      onStart={() => startEdit(emp, 'deduction')}
-                      onSave={() => handleSave(emp)}
-                      onCancel={cancelEdit}
-                      displayNode={
-                        <p className="text-xs font-bold text-red-500 bg-red-50/80 py-1 px-2 rounded-xl inline-block">
-                          {formatDeduction(emp.deductions)}
-                        </p>
-                      }
-                    />
-                  </div>
-
-                  {/* Bonus */}
-                  <div className="w-[12%]">
-                    <EditCell
-                      isEditing={isEditingBonus}
-                      isSaving={isSavingBonus}
-                      canEdit={canEdit}
-                      editValue={editValue}
-                      setEditValue={setEditValue}
-                      onStart={() => startEdit(emp, 'bonus')}
-                      onSave={() => handleSave(emp)}
-                      onCancel={cancelEdit}
-                      displayNode={
-                        <p className="text-xs font-bold text-slate-600">{formatCurrency(emp.bonus)}</p>
-                      }
-                    />
-                  </div>
-
-                  {/* Net Pay (read-only) */}
-                  <div className="w-[12%] text-center">
-                    <p className="text-xs font-bold text-indigo-600">{formatCurrency(emp.netPay)}</p>
-                  </div>
-
-                  {/* Status + Pay button */}
-                  <div className="w-[21%] flex justify-end items-center gap-2">
-                    {canEdit && (
-                      <button
-                        onClick={() => openEditModal(emp)}
-                        className="w-8 h-8 flex items-center justify-center rounded-xl bg-slate-50 text-slate-400 hover:text-indigo-500 hover:bg-indigo-50 transition-all shadow-sm border border-slate-100"
-                        title="Edit Row"
-                      >
-                        <Pencil size={14} />
-                      </button>
-                    )}
-                    {emp.status === 'Pending' && payrollId && (
-                      <button
-                        onClick={() => handlePay(emp)}
-                        disabled={isPaying}
-                        className="flex items-center gap-1.5 px-3 py-1.5 bg-indigo-500 hover:bg-indigo-600 disabled:opacity-60 text-white text-[9px] font-bold tracking-wider rounded-xl transition-colors shadow-sm shadow-indigo-500/30"
-                      >
-                        {isPaying ? <Loader2 size={10} className="animate-spin" /> : <Wallet size={10} />}
-                        {isPaying ? 'Paying…' : 'Pay'}
-                      </button>
-                    )}
-                    <span className={`px-3 py-1.5 rounded-full text-[9px] font-bold tracking-widest uppercase inline-flex items-center gap-1.5 ${
-                      emp.status === 'Paid'    ? 'bg-emerald-50 text-emerald-600' :
-                      emp.status === 'Pending' ? 'bg-amber-50  text-amber-600'   :
-                                                 'bg-red-50    text-red-600'
-                    }`}>
-                      <div className={`w-1.5 h-1.5 rounded-full ${
-                        emp.status === 'Paid'    ? 'bg-emerald-500' :
-                        emp.status === 'Pending' ? 'bg-amber-500'   :
-                                                   'bg-red-500'
-                      }`} />
-                      {emp.status}
-                    </span>
-                  </div>
-                </motion.div>
-              );
-            })
-          )}
-        </div>
-      </div>
-
-      {/* ── Bottom Summary + Process Button ── */}
-      <motion.div
-        initial={{ y: 20, opacity: 0 }} animate={{ y: 0, opacity: 1 }} transition={{ delay: 0.7 }}
-        className="flex flex-col lg:flex-row items-center justify-between gap-6 mb-10"
-      >
-        <div className="bg-white rounded-[2rem] shadow-sm p-2 flex flex-wrap sm:flex-nowrap items-center w-full lg:w-auto">
-          <div className="px-8 py-4">
-            <p className="text-[9px] font-bold text-slate-400 uppercase tracking-widest mb-1">Gross Total</p>
-            <p className="text-xl font-bold text-slate-800 font-outfit">{formatCurrency(data.totalSalary)}</p>
-          </div>
-          <div className="px-8 py-4">
-            <p className="text-[9px] font-bold text-slate-400 uppercase tracking-widest mb-1">Deductions</p>
-            <p className="text-xl font-bold text-red-500 font-outfit">{formatDeduction(data.totalDeductions)}</p>
-          </div>
-          <div className="bg-indigo-50/80 rounded-[1.5rem] py-4 px-10">
-            <p className="text-[9px] font-bold text-indigo-600 uppercase tracking-widest mb-1">Final Disbursable</p>
-            <p className="text-2xl font-bold text-slate-800 font-outfit">{formatCurrency(data.netPayroll)}</p>
-          </div>
-        </div>
-
-        <button
-          onClick={processMonthlyPayroll}
-          disabled={processing}
-          className="flex items-center justify-center gap-3 bg-indigo-500 hover:bg-indigo-600 text-white px-8 py-5 rounded-[2rem] font-bold text-sm transition-colors shadow-lg shadow-indigo-500/30 w-full lg:w-auto shrink-0 h-[88px] disabled:opacity-70 disabled:cursor-not-allowed"
-        >
-          {processing ? (
-            <><Loader2 size={18} className="animate-spin" /> Processing...</>
-          ) : (
-            <><Wallet size={18} /> Process Monthly Payroll <ArrowRight size={18} /></>
-          )}
-        </button>
-      </motion.div>
-        </>
-      ) : (
-        /* ── History View ── */
-        <div className="space-y-6">
-          <div className="flex justify-between items-center mb-6">
-            <h3 className="text-xl font-bold text-slate-800 font-outfit">Payroll History</h3>
-            <p className="text-xs text-slate-400">Past {payrollHistory.length} cycles recorded</p>
-          </div>
-
-          {payrollHistory.length === 0 ? (
-            <div className="bg-white rounded-[2rem] p-20 text-center shadow-sm border border-slate-100">
-              <div className="w-16 h-16 bg-slate-50 rounded-2xl flex items-center justify-center mx-auto mb-4 text-slate-300">
-                <FileBarChart size={32} />
+      <div className="flex flex-col gap-8">
+        
+        {/* ── Main Content: Full Width ── */}
+        <div className="w-full min-w-0">
+          
+          {/* ── Header & Controls ── */}
+          <div className="mb-10">
+            <div className="flex flex-col md:flex-row md:items-end justify-between gap-6 mb-8">
+              <div>
+                <h1 className="text-3xl font-bold text-slate-800 font-outfit mb-2">Monthly Payroll</h1>
+                <p className="text-sm text-slate-500">Manage and review employee salary payments by month</p>
               </div>
-              <p className="text-slate-500 font-medium">No payroll history found.</p>
-              <p className="text-xs text-slate-400 mt-1">Start by processing your first payroll cycle.</p>
-            </div>
-          ) : (
-            <div className="grid grid-cols-1 gap-4">
-              {payrollHistory.map((item, idx) => (
-                <motion.div
-                  key={item._id}
-                  initial={{ opacity: 0, y: 10 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  transition={{ delay: idx * 0.05 }}
-                  className="bg-white p-6 rounded-[2rem] shadow-sm border border-slate-100 flex items-center justify-between group hover:border-indigo-200 transition-all cursor-pointer"
-                  onClick={() => {
-                    // Logic to load this payroll would go here
-                    // For now we just show the summary
-                  }}
+
+              <div className="flex flex-wrap items-center gap-3">
+                {/* Month Selector */}
+                <div className="relative group">
+                  <select 
+                    value={selectedMonth}
+                    onChange={(e) => setSelectedMonth(e.target.value)}
+                    className="appearance-none bg-white border border-slate-200 rounded-xl px-5 py-3 pr-10 text-sm font-bold text-slate-700 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 transition-all cursor-pointer shadow-sm hover:border-slate-300"
+                  >
+                    {MONTHS.map(m => <option key={m} value={m}>{m}</option>)}
+                  </select>
+                  <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none" size={16} />
+                </div>
+
+                {/* Year Selector */}
+                <div className="relative group">
+                  <select 
+                    value={selectedYear}
+                    onChange={(e) => setSelectedYear(parseInt(e.target.value))}
+                    className="appearance-none bg-white border border-slate-200 rounded-xl px-5 py-3 pr-10 text-sm font-bold text-slate-700 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 transition-all cursor-pointer shadow-sm hover:border-slate-300"
+                  >
+                    {YEARS.map(y => <option key={y} value={y}>{y}</option>)}
+                  </select>
+                  <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none" size={16} />
+                </div>
+
+                <button 
+                  onClick={handleProcessPayroll}
+                  disabled={processing}
+                  className="bg-indigo-600 hover:bg-indigo-700 disabled:opacity-70 text-white px-6 py-3 rounded-xl text-sm font-bold shadow-lg shadow-indigo-600/20 transition-all flex items-center gap-2"
                 >
-                  <div className="flex items-center gap-5">
-                    <div className="w-12 h-12 bg-indigo-50 text-indigo-600 rounded-2xl flex items-center justify-center font-bold text-xs uppercase tracking-tighter">
-                      {item.month.substring(0, 3)}
-                    </div>
+                  {processing ? <Loader2 size={16} className="animate-spin" /> : <Wallet size={16} />}
+                  Process Monthly Payroll
+                </button>
+              </div>
+            </div>
+
+            {/* Search & Actions */}
+            <div className="flex flex-col sm:flex-row gap-4 items-center">
+              <div className="relative flex-1 group">
+                <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 group-focus-within:text-indigo-500 transition-colors" size={18} />
+                <input 
+                  type="text" 
+                  placeholder="Search employee by name or role..."
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                  className="w-full bg-white border border-slate-200 rounded-2xl py-3.5 pl-12 pr-4 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500/10 focus:border-indigo-500/50 transition-all shadow-sm"
+                />
+              </div>
+              <div className="flex gap-2 shrink-0">
+                <button className="p-3 bg-white border border-slate-200 text-slate-500 hover:text-indigo-600 hover:border-indigo-100 rounded-xl transition-all shadow-sm"><Filter size={20} /></button>
+                <button className="p-3 bg-white border border-slate-200 text-slate-500 hover:text-indigo-600 hover:border-indigo-100 rounded-xl transition-all shadow-sm"><Download size={20} /></button>
+              </div>
+            </div>
+          </div>
+
+          {loading ? (
+            <div className="flex flex-col items-center justify-center h-64 bg-white/50 backdrop-blur-sm rounded-[2.5rem] border border-slate-100">
+              <Loader2 className="w-10 h-10 text-indigo-500 animate-spin mb-4" />
+              <p className="text-slate-400 font-medium">Fetching payroll records...</p>
+            </div>
+          ) : !payrollId ? (
+            <motion.div 
+              initial={{ opacity: 0, scale: 0.95 }}
+              animate={{ opacity: 1, scale: 1 }}
+              className="bg-white rounded-[2.5rem] p-20 text-center shadow-sm border border-slate-100"
+            >
+              <div className="w-20 h-20 bg-slate-50 rounded-3xl flex items-center justify-center mx-auto mb-6 text-slate-300">
+                <Calendar size={40} />
+              </div>
+              <h3 className="text-xl font-bold text-slate-800 mb-2">No records found for {selectedMonth} {selectedYear}</h3>
+              <p className="text-slate-500 max-w-xs mx-auto mb-8 leading-relaxed">
+                Start by processing the payroll for this month to generate employee salary details.
+              </p>
+              <button 
+                onClick={handleProcessPayroll}
+                className="bg-indigo-50 text-indigo-600 hover:bg-indigo-600 hover:text-white px-8 py-4 rounded-2xl font-bold transition-all"
+              >
+                Process {selectedMonth} Payroll
+              </button>
+            </motion.div>
+          ) : (
+            <>
+              {/* ── Summary Cards ── */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4 mb-8">
+                {[
+                  { label: 'Total Employees', value: data.employees.length, icon: <Clock className="text-blue-500" />, bg: 'bg-blue-50' },
+                  { label: 'Gross Salary', value: formatCurrency(data.totalSalary), icon: <Wallet className="text-indigo-500" />, bg: 'bg-indigo-50' },
+                  { label: 'Total Deductions', value: formatDeduction(data.totalDeductions), icon: <MinusCircle className="text-red-500" />, bg: 'bg-red-50' },
+                  { label: 'Net Payroll', value: formatCurrency(data.netPayroll), icon: <Banknote className="text-emerald-500" />, bg: 'bg-emerald-50' },
+                ].map((stat, i) => (
+                  <motion.div
+                    key={stat.label}
+                    initial={{ y: 20, opacity: 0 }}
+                    animate={{ y: 0, opacity: 1 }}
+                    transition={{ delay: i * 0.1 }}
+                    className="bg-white p-5 rounded-3xl shadow-sm border border-slate-100 flex items-center justify-between"
+                  >
                     <div>
-                      <h4 className="text-base font-bold text-slate-800">{item.month}</h4>
-                      <p className="text-[10px] text-slate-400 uppercase tracking-widest font-bold">{item.employeeCount} Employees Paid</p>
+                      <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1">{stat.label}</p>
+                      <h3 className="text-xl font-bold text-slate-800 font-outfit">{stat.value}</h3>
                     </div>
+                    <div className={`w-12 h-12 ${stat.bg} rounded-2xl flex items-center justify-center`}>
+                      {React.cloneElement(stat.icon, { size: 20 })}
+                    </div>
+                  </motion.div>
+                ))}
+              </div>
+
+              {/* ── Main Table ── */}
+              <div className="bg-white rounded-[2.5rem] shadow-sm border border-slate-100 overflow-hidden mb-8">
+                <div className="overflow-x-auto">
+                  <table className="w-full text-left border-collapse">
+                    <thead>
+                      <tr className="border-b border-slate-50">
+                        <th className="px-8 py-5 text-[10px] font-bold text-slate-400 uppercase tracking-widest">Employee</th>
+                        <th className="px-6 py-5 text-[10px] font-bold text-slate-400 uppercase tracking-widest text-center">Gross</th>
+                        <th className="px-6 py-5 text-[10px] font-bold text-slate-400 uppercase tracking-widest text-center">Deductions</th>
+                        <th className="px-6 py-5 text-[10px] font-bold text-slate-400 uppercase tracking-widest text-center">Bonus</th>
+                        <th className="px-6 py-5 text-[10px] font-bold text-slate-400 uppercase tracking-widest text-center">Net Salary</th>
+                        <th className="px-6 py-5 text-[10px] font-bold text-slate-400 uppercase tracking-widest text-center">Status</th>
+                        <th className="px-8 py-5 text-[10px] font-bold text-slate-400 uppercase tracking-widest text-right">Actions</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-slate-50">
+                      {filteredEmployees.map((emp, idx) => (
+                        <tr key={emp.employeeId || idx} className="hover:bg-slate-50/50 transition-colors group">
+                          <td className="px-8 py-4">
+                            <div className="flex items-center gap-3">
+                              <img 
+                                src={`https://api.dicebear.com/7.x/avataaars/svg?seed=${emp.name}`} 
+                                className="w-10 h-10 rounded-full bg-slate-100 shrink-0" 
+                                alt=""
+                              />
+                              <div>
+                                <p className="text-sm font-bold text-slate-800">{emp.name}</p>
+                                <p className="text-[10px] text-slate-400 font-bold uppercase tracking-wider">{emp.role}</p>
+                              </div>
+                            </div>
+                          </td>
+                          <td className="px-6 py-4 text-center font-bold text-xs text-slate-600">{formatCurrency(emp.baseSalary)}</td>
+                          <td className="px-6 py-4 text-center font-bold text-xs text-red-500">{formatDeduction(emp.deductions)}</td>
+                          <td className="px-6 py-4 text-center font-bold text-xs text-indigo-500">{formatCurrency(emp.bonus)}</td>
+                          <td className="px-6 py-4 text-center font-bold text-sm text-slate-800 font-outfit">{formatCurrency(emp.netPay)}</td>
+                          <td className="px-6 py-4 text-center">
+                            <span className={`px-3 py-1.5 rounded-full text-[9px] font-bold tracking-widest uppercase inline-flex items-center gap-1.5 border ${getStatusStyle(emp.status)}`}>
+                              <div className={`w-1.5 h-1.5 rounded-full bg-current`} />
+                              {emp.status}
+                            </span>
+                          </td>
+                          <td className="px-8 py-4 text-right">
+                            <div className="flex justify-end gap-2">
+                              <button 
+                                onClick={() => openEditModal(emp)}
+                                className="p-2 text-slate-400 hover:text-indigo-500 hover:bg-indigo-50 rounded-lg transition-all"
+                                title="Edit Details"
+                              >
+                                <Pencil size={16} />
+                              </button>
+                              {emp.status !== 'Paid' ? (
+                                <button 
+                                  onClick={() => handlePay(emp)}
+                                  disabled={payingId === emp.employeeId}
+                                  className="bg-indigo-600 text-white px-4 py-2 rounded-xl text-[10px] font-bold uppercase tracking-widest hover:bg-indigo-700 transition-colors shadow-sm disabled:opacity-50"
+                                >
+                                  {payingId === emp.employeeId ? <Loader2 size={12} className="animate-spin" /> : 'Pay Now'}
+                                </button>
+                              ) : (
+                                <button className="p-2 text-slate-400 hover:text-emerald-500 hover:bg-emerald-50 rounded-lg transition-all">
+                                  <ExternalLink size={16} />
+                                </button>
+                              )}
+                            </div>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            </>
+          )}
+        </div>
+
+        </div>
+
+        {/* ── Bottom Section: Expanded Insights & History ── */}
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+          
+          {/* Cycle Info */}
+          <div className="bg-indigo-600 rounded-[2.5rem] p-8 text-white shadow-xl shadow-indigo-600/20 flex flex-col justify-between min-h-[220px]">
+            <div>
+              <p className="text-[10px] font-bold text-indigo-200 uppercase tracking-widest mb-3">Next Payroll Cycle</p>
+              <h3 className="text-4xl font-bold font-outfit mb-2">{formatDate(data.nextPayCycle)}</h3>
+              <p className="text-xs text-indigo-100 opacity-80 leading-relaxed">
+                Payments will be automatically initiated for all pending employees on this date.
+              </p>
+            </div>
+            <div className="flex items-center gap-2 mt-8 text-[10px] font-bold uppercase tracking-widest bg-white/10 w-fit px-4 py-2 rounded-lg backdrop-blur-sm">
+              <ShieldCheck size={14} />
+              Compliance Verified
+            </div>
+          </div>
+
+          {/* Compliance Card */}
+          <div className="bg-slate-50 rounded-[2.5rem] p-8 border border-slate-100 flex flex-col justify-between">
+            <div>
+              <h4 className="text-sm font-bold text-slate-800 mb-3 flex items-center gap-2">
+                <ShieldCheck size={16} className="text-emerald-500" />
+                Tax Compliance
+              </h4>
+              <p className="text-xs text-slate-500 leading-relaxed mb-6">
+                Tax filings for Q1 2026 are ready for submission. Regional standards applied.
+              </p>
+            </div>
+            <button className="flex items-center gap-2 text-[10px] font-bold text-indigo-600 uppercase tracking-widest hover:translate-x-1 transition-transform">
+              Review Report <ArrowRight size={14} />
+            </button>
+          </div>
+
+          {/* History Timeline - Now at the bottom */}
+          <div className="bg-white rounded-[2.5rem] p-8 shadow-sm border border-slate-100">
+            <h3 className="text-lg font-bold text-slate-800 font-outfit mb-6 flex items-center gap-2">
+              <Clock size={20} className="text-indigo-500" />
+              Recent Cycles
+            </h3>
+            <div className="space-y-6 relative before:absolute before:left-[11px] before:top-2 before:bottom-2 before:w-px before:bg-slate-100">
+              {payrollHistory.slice(0, 3).map((h, i) => (
+                <div key={h._id} className="relative pl-8 group">
+                  <div className={`absolute left-0 top-1.5 w-[23px] h-[23px] rounded-full border-4 border-white shadow-sm transition-colors ${i === 0 ? 'bg-indigo-500' : 'bg-slate-200'}`} />
+                  <div className="flex justify-between items-start">
+                    <div>
+                      <p className="text-xs font-bold text-slate-800 mb-0.5">{h.month} {h.year}</p>
+                      <p className="text-[9px] text-slate-400 font-bold uppercase tracking-wider">{h.status}</p>
+                    </div>
+                    <p className="text-[10px] font-bold text-indigo-600">{formatCurrency(h.netPayroll)}</p>
                   </div>
-                  
-                  <div className="flex items-center gap-12">
-                    <div className="text-right">
-                      <p className="text-[9px] text-slate-400 uppercase tracking-widest font-bold mb-1">Gross Total</p>
-                      <p className="text-sm font-bold text-slate-700">{formatCurrency(item.totalSalary)}</p>
-                    </div>
-                    <div className="text-right">
-                      <p className="text-[9px] text-slate-400 uppercase tracking-widest font-bold mb-1">Disbursed</p>
-                      <p className="text-sm font-bold text-indigo-600">{formatCurrency(item.netPayroll)}</p>
-                    </div>
-                    <div className="bg-slate-50 px-4 py-2 rounded-xl text-[10px] font-bold text-slate-500 uppercase tracking-widest">
-                      {item.status}
-                    </div>
-                    <div className="text-slate-300 group-hover:text-indigo-400 transition-colors">
-                      <ArrowRight size={18} />
-                    </div>
-                  </div>
-                </motion.div>
+                </div>
               ))}
             </div>
-          )}
+          </div>
+
         </div>
-      )}
 
-      {/* ── Bottom Cards ── */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 pb-8">
-        <motion.div
-          initial={{ y: 20, opacity: 0 }} animate={{ y: 0, opacity: 1 }} transition={{ delay: 0.8 }}
-          className="lg:col-span-2 bg-[#F8FAFC] rounded-3xl p-8 border border-slate-100 flex flex-col justify-between shadow-sm"
-        >
-          <div className="max-w-md">
-            <h3 className="text-xl font-bold text-slate-800 font-outfit mb-2">Compliance Check</h3>
-            <p className="text-sm text-slate-500 mb-8 leading-relaxed">
-              Automated audit of tax filings and benefit contributions for the current fiscal period.
-            </p>
-          </div>
-          <div className="flex flex-wrap items-center gap-6 mt-auto">
-            <div className="flex -space-x-2">
-              <div className="w-8 h-8 rounded-full bg-indigo-100 flex items-center justify-center text-[9px] font-bold text-indigo-600 border-2 border-slate-50 z-30">IRS</div>
-              <div className="w-8 h-8 rounded-full bg-emerald-100 flex items-center justify-center text-[9px] font-bold text-emerald-600 border-2 border-slate-50 z-20">W2</div>
-              <div className="w-8 h-8 rounded-full bg-slate-200 flex items-center justify-center text-[9px] font-bold text-slate-600 border-2 border-slate-50 z-10">+2</div>
-            </div>
-            <div className="flex items-center gap-2 text-emerald-600">
-              <ShieldCheck size={16} />
-              <span className="text-xs font-bold uppercase tracking-wider">All regulatory updates applied</span>
-            </div>
-          </div>
-        </motion.div>
-
-        <motion.div
-          initial={{ y: 20, opacity: 0 }} animate={{ y: 0, opacity: 1 }} transition={{ delay: 0.9 }}
-          className="bg-indigo-600 rounded-3xl p-8 shadow-lg shadow-indigo-600/30 text-white flex flex-col justify-between"
-        >
-          <div>
-            <p className="text-[10px] font-bold text-indigo-200 uppercase tracking-widest mb-2">Next Pay Cycle</p>
-            <h3 className="text-4xl font-bold font-outfit mb-8">{formatDate(data.nextPayCycle)}</h3>
-          </div>
-          <button className="w-full bg-white/10 hover:bg-white/20 backdrop-blur-md border border-white/20 px-6 py-3 rounded-xl text-xs font-bold tracking-widest uppercase transition-colors">
-            Every Month
-          </button>
-        </motion.div>
-      </div>
       {/* ── Edit Modal ── */}
       <AnimatePresence>
         {isEditModalOpen && editingEmployee && (
@@ -619,34 +430,28 @@ const Payroll = () => {
               <div className="px-8 pt-8 pb-6 border-b border-slate-50">
                 <div className="flex justify-between items-start mb-6">
                   <div className="flex items-center gap-4">
-                    <img
-                      src={`https://api.dicebear.com/7.x/avataaars/svg?seed=${editingEmployee.avatar || editingEmployee._id}`}
-                      className="w-12 h-12 rounded-2xl bg-slate-100"
+                    <img 
+                      src={`https://api.dicebear.com/7.x/avataaars/svg?seed=${editingEmployee.name}`} 
+                      className="w-12 h-12 rounded-2xl bg-slate-100" 
                       alt=""
                     />
                     <div>
-                      <h3 className="text-xl font-bold text-slate-800 font-outfit">Edit Payroll</h3>
+                      <h3 className="text-xl font-bold text-slate-800 font-outfit">Adjust Salary</h3>
                       <p className="text-xs font-bold text-slate-400 uppercase tracking-wider">{editingEmployee.name}</p>
                     </div>
                   </div>
-                  <button
-                    onClick={closeEditModal}
-                    className="w-10 h-10 flex items-center justify-center rounded-xl bg-slate-50 text-slate-400 hover:text-slate-600 transition-colors"
-                  >
-                    <X size={18} />
-                  </button>
+                  <button onClick={closeEditModal} className="p-2 text-slate-400 hover:text-slate-600 transition-colors"><X size={20} /></button>
                 </div>
 
                 <form onSubmit={handleSaveFields} className="space-y-5">
                   <div>
                     <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-2 px-1">Base Salary</label>
                     <div className="relative">
-                      <div className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 font-bold text-sm">$</div>
-                      <input
-                        type="number"
-                        step="0.01"
+                      <div className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 font-bold text-sm">₹</div>
+                      <input 
+                        type="number" 
                         value={modalValues.baseSalary}
-                        onChange={(e) => setModalValues({ ...modalValues, baseSalary: e.target.value })}
+                        onChange={(e) => setModalValues({...modalValues, baseSalary: e.target.value})}
                         className="w-full bg-slate-50 border-none rounded-2xl py-4 pl-8 pr-4 text-sm font-bold text-slate-700 focus:ring-2 focus:ring-indigo-500/20"
                         required
                       />
@@ -657,26 +462,24 @@ const Payroll = () => {
                     <div>
                       <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-2 px-1">Bonus</label>
                       <div className="relative">
-                        <div className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 font-bold text-sm">$</div>
-                        <input
-                          type="number"
-                          step="0.01"
+                        <div className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 font-bold text-sm">₹</div>
+                        <input 
+                          type="number" 
                           value={modalValues.bonus}
-                          onChange={(e) => setModalValues({ ...modalValues, bonus: e.target.value })}
+                          onChange={(e) => setModalValues({...modalValues, bonus: e.target.value})}
                           className="w-full bg-slate-50 border-none rounded-2xl py-4 pl-8 pr-4 text-sm font-bold text-slate-700 focus:ring-2 focus:ring-indigo-500/20"
                           required
                         />
                       </div>
                     </div>
                     <div>
-                      <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-2 px-1 text-red-400">Deductions</label>
+                      <label className="block text-[10px] font-bold text-red-400 uppercase tracking-widest mb-2 px-1">Deductions</label>
                       <div className="relative">
-                        <div className="absolute left-4 top-1/2 -translate-y-1/2 text-red-300 font-bold text-sm">$</div>
-                        <input
-                          type="number"
-                          step="0.01"
+                        <div className="absolute left-4 top-1/2 -translate-y-1/2 text-red-300 font-bold text-sm">₹</div>
+                        <input 
+                          type="number" 
                           value={modalValues.deductions}
-                          onChange={(e) => setModalValues({ ...modalValues, deductions: e.target.value })}
+                          onChange={(e) => setModalValues({...modalValues, deductions: e.target.value})}
                           className="w-full bg-red-50/30 border-none rounded-2xl py-4 pl-8 pr-4 text-sm font-bold text-red-600 focus:ring-2 focus:ring-red-500/10"
                           required
                         />
@@ -685,20 +488,14 @@ const Payroll = () => {
                   </div>
 
                   <div className="pt-4 flex gap-3">
-                    <button
-                      type="button"
-                      onClick={closeEditModal}
-                      className="flex-1 py-4 rounded-2xl text-sm font-bold text-slate-500 hover:bg-slate-50 transition-colors"
-                    >
-                      Cancel
-                    </button>
-                    <button
-                      type="submit"
+                    <button type="button" onClick={closeEditModal} className="flex-1 py-4 rounded-2xl text-sm font-bold text-slate-500 hover:bg-slate-50 transition-colors">Cancel</button>
+                    <button 
+                      type="submit" 
                       disabled={isModalSaving}
-                      className="flex-1 bg-indigo-600 hover:bg-indigo-700 disabled:opacity-50 text-white py-4 rounded-2xl text-sm font-bold shadow-lg shadow-indigo-600/30 transition-all flex items-center justify-center gap-2"
+                      className="flex-1 bg-indigo-600 hover:bg-indigo-700 text-white py-4 rounded-2xl text-sm font-bold shadow-lg shadow-indigo-600/30 transition-all flex items-center justify-center gap-2"
                     >
                       {isModalSaving ? <Loader2 size={16} className="animate-spin" /> : <Check size={16} />}
-                      {isModalSaving ? 'Saving...' : 'Save Changes'}
+                      Save Changes
                     </button>
                   </div>
                 </form>

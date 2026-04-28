@@ -12,6 +12,7 @@ router.post('/process', auth, payrollController.processPayroll);
 // @desc    Get the latest payroll data
 // @access  Private
 router.get('/current', auth, payrollController.getCurrentPayroll);
+router.get('/filter', auth, payrollController.getPayrollByMonth);
 
 // @route   GET /api/payroll/history
 // @desc    Get all historical payroll records
