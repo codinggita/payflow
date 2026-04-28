@@ -11,7 +11,10 @@ const dashboardRoutes = require('./routes/dashboardRoutes');
 const payrollRoutes = require('./routes/payrollRoutes');
 
 // Middleware
-app.use(cors());
+app.use(cors({
+  origin: ['http://localhost:5173', 'http://localhost:3000'],
+  credentials: true,
+}));
 app.use(express.json());
 
 // Mount Routes

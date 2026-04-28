@@ -4,9 +4,9 @@ const Employee = require('../models/Employee');
 // POST /api/payroll/process
 exports.processPayroll = async (req, res) => {
   try {
-    const { taxPercent = 10, month, year } = req.body;
+    const { taxPercent: globalTaxPercent = 10, month, year } = req.body || {};
 
-    // Fetch all employees
+    // Fetch all active employees
     const employees = await Employee.find({});
 
     if (!employees || employees.length === 0) {
@@ -16,72 +16,67 @@ exports.processPayroll = async (req, res) => {
     let totalSalary = 0;
     let totalDeductions = 0;
     let totalBonus = 0;
-    
-    // Default to current month/year if not provided
+
     const currentDate = new Date();
-    const currentMonth = month || currentDate.toLocaleString('default', { month: 'long' }) + ' ' + currentDate.getFullYear();
+    const currentMonth = month || currentDate.toLocaleString('en-US', { month: 'long', year: 'numeric' });
     const currentYear = year || currentDate.getFullYear();
 
-    // Map employees to snapshot schema and calculate values
+    // Map employees using their individual taxPercent
     const employeeSnapshots = employees.map(emp => {
-      // Calculate deductions
-      const deductions = (emp.baseSalary * taxPercent) / 100;
-      const bonus = 0; // Default bonus
-      const netPay = emp.baseSalary - deductions + bonus;
+      const rate = (emp.taxPercent != null ? emp.taxPercent : globalTaxPercent);
+      const deductions = parseFloat(((emp.baseSalary * rate) / 100).toFixed(2));
+      const bonus = 0;
+      const netPay = parseFloat((emp.baseSalary - deductions + bonus).toFixed(2));
 
-      // Add to totals
-      totalSalary += emp.baseSalary;
+      totalSalary    += emp.baseSalary;
       totalDeductions += deductions;
-      totalBonus += bonus;
+      totalBonus     += bonus;
 
       return {
         employeeId: emp._id,
-        name: emp.name,
-        role: emp.role,
-        avatar: emp.avatar,
+        name:       emp.name,
+        role:       emp.role,
+        avatar:     emp.avatar || '',
         baseSalary: emp.baseSalary,
-        deductions: deductions,
-        bonus: bonus,
-        netPay: netPay,
+        deductions,
+        bonus,
+        netPay,
         status: 'Pending'
       };
     });
 
-    const netPayroll = totalSalary - totalDeductions + totalBonus;
+    const netPayroll = parseFloat((totalSalary - totalDeductions + totalBonus).toFixed(2));
 
-    // Calculate next pay cycle (15th of next month)
-    let nextMonth = currentDate.getMonth() + 1;
-    let nextYear = currentDate.getFullYear();
-    if (nextMonth > 11) {
-      nextMonth = 0;
-      nextYear++;
-    }
-    const nextPayCycle = new Date(nextYear, nextMonth, 15);
+    // Next pay cycle → 15th of next month
+    const nextPayCycle = new Date(
+      currentDate.getFullYear(),
+      currentDate.getMonth() + 1,
+      15
+    );
 
-    // Create the Payroll document
     const payroll = new Payroll({
-      month: currentMonth,
-      year: currentYear,
-      cycleDate: currentDate,
-      totalSalary,
-      totalDeductions,
-      totalBonus,
+      month:           currentMonth,
+      year:            currentYear,
+      cycleDate:       currentDate,
+      totalSalary:     parseFloat(totalSalary.toFixed(2)),
+      totalDeductions: parseFloat(totalDeductions.toFixed(2)),
+      totalBonus:      parseFloat(totalBonus.toFixed(2)),
       netPayroll,
       estimatedOutflow: netPayroll,
-      status: 'Processing',
-      employees: employeeSnapshots,
+      status:          'Completed',
+      employees:       employeeSnapshots,
       nextPayCycle,
       complianceStatus: 'Standard Regional Policy Applied'
     });
 
     await payroll.save();
-
     res.status(201).json(payroll);
   } catch (err) {
-    console.error(err.message);
-    res.status(500).send('Server Error');
+    console.error('processPayroll error:', err.message);
+    res.status(500).json({ msg: 'Server error while processing payroll' });
   }
 };
+
 
 // GET /api/payroll/current
 exports.getCurrentPayroll = async (req, res) => {
