@@ -6,8 +6,8 @@ exports.processPayroll = async (req, res) => {
   try {
     const { taxPercent: globalTaxPercent = 10, month, year } = req.body || {};
 
-    // Fetch all active employees
-    const employees = await Employee.find({});
+    // Fetch only active employees for payroll processing
+    const employees = await Employee.find({ status: 'Active' });
 
     if (!employees || employees.length === 0) {
       return res.status(400).json({ msg: 'No employees found to process payroll.' });
@@ -54,23 +54,39 @@ exports.processPayroll = async (req, res) => {
       15
     );
 
-    const payroll = new Payroll({
-      month:           currentMonth,
-      year:            currentYear,
-      cycleDate:       currentDate,
-      totalSalary:     parseFloat(totalSalary.toFixed(2)),
-      totalDeductions: parseFloat(totalDeductions.toFixed(2)),
-      totalBonus:      parseFloat(totalBonus.toFixed(2)),
-      netPayroll,
-      estimatedOutflow: netPayroll,
-      status:          'Completed',
-      employees:       employeeSnapshots,
-      nextPayCycle,
-      complianceStatus: 'Standard Regional Policy Applied'
-    });
+    // Check if payroll for this month already exists
+    let payroll = await Payroll.findOne({ month: currentMonth, year: currentYear });
+
+    if (payroll) {
+      // Update existing record
+      payroll.totalSalary = parseFloat(totalSalary.toFixed(2));
+      payroll.totalDeductions = parseFloat(totalDeductions.toFixed(2));
+      payroll.totalBonus = parseFloat(totalBonus.toFixed(2));
+      payroll.netPayroll = netPayroll;
+      payroll.estimatedOutflow = netPayroll;
+      payroll.employees = employeeSnapshots;
+      payroll.nextPayCycle = nextPayCycle;
+      payroll.status = 'Completed'; // Ensure it's marked as completed
+    } else {
+      // Create new record
+      payroll = new Payroll({
+        month:           currentMonth,
+        year:            currentYear,
+        cycleDate:       currentDate,
+        totalSalary:     parseFloat(totalSalary.toFixed(2)),
+        totalDeductions: parseFloat(totalDeductions.toFixed(2)),
+        totalBonus:      parseFloat(totalBonus.toFixed(2)),
+        netPayroll,
+        estimatedOutflow: netPayroll,
+        status:          'Completed',
+        employees:       employeeSnapshots,
+        nextPayCycle,
+        complianceStatus: 'Standard Regional Policy Applied'
+      });
+    }
 
     await payroll.save();
-    res.status(201).json(payroll);
+    res.status(payroll.isNew ? 201 : 200).json(payroll);
   } catch (err) {
     console.error('processPayroll error:', err.message);
     res.status(500).json({ msg: 'Server error while processing payroll' });
@@ -123,7 +139,7 @@ exports.getPayrollHistory = async (req, res) => {
 // PUT /api/payroll/:payrollId/employee/:employeeId
 exports.updateEmployeePayrollStatus = async (req, res) => {
   try {
-    const { status } = req.body;
+    const { status } = req.body || {};
     const { payrollId, employeeId } = req.params;
 
     if (!['Paid', 'Pending', 'Error'].includes(status)) {
@@ -131,28 +147,172 @@ exports.updateEmployeePayrollStatus = async (req, res) => {
     }
 
     const payroll = await Payroll.findById(payrollId);
-    
-    if (!payroll) {
-      return res.status(404).json({ msg: 'Payroll not found' });
-    }
+    if (!payroll) return res.status(404).json({ msg: 'Payroll not found' });
 
-    // Find the employee in the snapshots array
-    const employeeIndex = payroll.employees.findIndex(
+    const empIndex = payroll.employees.findIndex(
       emp => emp.employeeId.toString() === employeeId
     );
+    if (empIndex === -1) return res.status(404).json({ msg: 'Employee not found in this payroll cycle' });
 
-    if (employeeIndex === -1) {
-      return res.status(404).json({ msg: 'Employee not found in this payroll cycle' });
-    }
-
-    // Update status
-    payroll.employees[employeeIndex].status = status;
-    
+    payroll.employees[empIndex].status = status;
     await payroll.save();
-
     res.json(payroll);
   } catch (err) {
-    console.error(err.message);
-    res.status(500).send('Server Error');
+    console.error('updateEmployeePayrollStatus error:', err.message);
+    res.status(500).json({ msg: 'Server error while updating status' });
+  }
+};
+
+// PUT /api/payroll/:payrollId/employee/:employeeId/deduction
+exports.updateEmployeeDeduction = async (req, res) => {
+  try {
+    const { deductions } = req.body || {};
+    const { payrollId, employeeId } = req.params;
+
+    const newDeduction = parseFloat(parseFloat(deductions).toFixed(2));
+    if (isNaN(newDeduction) || newDeduction < 0) {
+      return res.status(400).json({ msg: 'Invalid deduction value' });
+    }
+
+    const payroll = await Payroll.findById(payrollId);
+    if (!payroll) return res.status(404).json({ msg: 'Payroll not found' });
+
+    const empIndex = payroll.employees.findIndex(
+      emp => emp.employeeId.toString() === employeeId
+    );
+    if (empIndex === -1) return res.status(404).json({ msg: 'Employee not found in this payroll cycle' });
+
+    const emp = payroll.employees[empIndex];
+    const oldDeduction = emp.deductions;
+
+    // Update employee snapshot
+    emp.deductions = newDeduction;
+    emp.netPay = parseFloat((emp.baseSalary - newDeduction + emp.bonus).toFixed(2));
+
+    // Recalculate payroll-level totals
+    payroll.totalDeductions = parseFloat((payroll.totalDeductions - oldDeduction + newDeduction).toFixed(2));
+    payroll.netPayroll      = parseFloat((payroll.totalSalary - payroll.totalDeductions + payroll.totalBonus).toFixed(2));
+    payroll.estimatedOutflow = payroll.netPayroll;
+
+    await payroll.save();
+    res.json(payroll);
+  } catch (err) {
+    console.error('updateEmployeeDeduction error:', err.message);
+    res.status(500).json({ msg: 'Server error while updating deduction' });
+  }
+};
+
+// PUT /api/payroll/:payrollId/employee/:employeeId/bonus
+exports.updateEmployeeBonus = async (req, res) => {
+  try {
+    const { bonus } = req.body || {};
+    const { payrollId, employeeId } = req.params;
+
+    const newBonus = parseFloat(parseFloat(bonus).toFixed(2));
+    if (isNaN(newBonus) || newBonus < 0) {
+      return res.status(400).json({ msg: 'Invalid bonus value' });
+    }
+
+    const payroll = await Payroll.findById(payrollId);
+    if (!payroll) return res.status(404).json({ msg: 'Payroll not found' });
+
+    const empIndex = payroll.employees.findIndex(
+      emp => emp.employeeId.toString() === employeeId
+    );
+    if (empIndex === -1) return res.status(404).json({ msg: 'Employee not found in this payroll cycle' });
+
+    const emp = payroll.employees[empIndex];
+    const oldBonus = emp.bonus;
+
+    emp.bonus  = newBonus;
+    emp.netPay = parseFloat((emp.baseSalary - emp.deductions + newBonus).toFixed(2));
+
+    payroll.totalBonus = parseFloat((payroll.totalBonus - oldBonus + newBonus).toFixed(2));
+    payroll.netPayroll = parseFloat((payroll.totalSalary - payroll.totalDeductions + payroll.totalBonus).toFixed(2));
+    payroll.estimatedOutflow = payroll.netPayroll;
+
+    await payroll.save();
+    res.json(payroll);
+  } catch (err) {
+    console.error('updateEmployeeBonus error:', err.message);
+    res.status(500).json({ msg: 'Server error while updating bonus' });
+  }
+};
+
+// PUT /api/payroll/:payrollId/employee/:employeeId/salary
+exports.updateEmployeeBaseSalary = async (req, res) => {
+  try {
+    const { baseSalary } = req.body || {};
+    const { payrollId, employeeId } = req.params;
+
+    const newSalary = parseFloat(parseFloat(baseSalary).toFixed(2));
+    if (isNaN(newSalary) || newSalary < 0) {
+      return res.status(400).json({ msg: 'Invalid salary value' });
+    }
+
+    const payroll = await Payroll.findById(payrollId);
+    if (!payroll) return res.status(404).json({ msg: 'Payroll not found' });
+
+    const empIndex = payroll.employees.findIndex(
+      emp => emp.employeeId.toString() === employeeId
+    );
+    if (empIndex === -1) return res.status(404).json({ msg: 'Employee not found in this payroll cycle' });
+
+    const emp = payroll.employees[empIndex];
+    const oldSalary = emp.baseSalary;
+
+    emp.baseSalary = newSalary;
+    emp.netPay     = parseFloat((newSalary - emp.deductions + emp.bonus).toFixed(2));
+
+    payroll.totalSalary = parseFloat((payroll.totalSalary - oldSalary + newSalary).toFixed(2));
+    payroll.netPayroll  = parseFloat((payroll.totalSalary - payroll.totalDeductions + payroll.totalBonus).toFixed(2));
+    payroll.estimatedOutflow = payroll.netPayroll;
+
+    await payroll.save();
+    res.json(payroll);
+  } catch (err) {
+    console.error('updateEmployeeBaseSalary error:', err.message);
+    res.status(500).json({ msg: 'Server error while updating salary' });
+  }
+};
+// PUT /api/payroll/:payrollId/employee/:employeeId/fields
+exports.updateEmployeePayrollFields = async (req, res) => {
+  try {
+    const { baseSalary, deductions, bonus } = req.body || {};
+    const { payrollId, employeeId } = req.params;
+
+    const payroll = await Payroll.findById(payrollId);
+    if (!payroll) return res.status(404).json({ msg: 'Payroll not found' });
+
+    const empIndex = payroll.employees.findIndex(
+      emp => emp.employeeId.toString() === employeeId
+    );
+    if (empIndex === -1) return res.status(404).json({ msg: 'Employee not found in this payroll cycle' });
+
+    const emp = payroll.employees[empIndex];
+    
+    // Track changes for totals
+    const oldSalary = emp.baseSalary;
+    const oldDeduction = emp.deductions;
+    const oldBonus = emp.bonus;
+
+    if (baseSalary !== undefined) emp.baseSalary = parseFloat(parseFloat(baseSalary).toFixed(2));
+    if (deductions !== undefined) emp.deductions = parseFloat(parseFloat(deductions).toFixed(2));
+    if (bonus !== undefined) emp.bonus = parseFloat(parseFloat(bonus).toFixed(2));
+
+    emp.netPay = parseFloat((emp.baseSalary - emp.deductions + emp.bonus).toFixed(2));
+
+    // Update totals
+    payroll.totalSalary = parseFloat((payroll.totalSalary - oldSalary + emp.baseSalary).toFixed(2));
+    payroll.totalDeductions = parseFloat((payroll.totalDeductions - oldDeduction + emp.deductions).toFixed(2));
+    payroll.totalBonus = parseFloat((payroll.totalBonus - oldBonus + emp.bonus).toFixed(2));
+    payroll.netPayroll = parseFloat((payroll.totalSalary - payroll.totalDeductions + payroll.totalBonus).toFixed(2));
+    payroll.estimatedOutflow = payroll.netPayroll;
+
+    await payroll.save();
+    res.json(payroll);
+  } catch (err) {
+    console.error('updateEmployeePayrollFields error:', err.message);
+    res.status(500).json({ msg: 'Server error while updating payroll fields' });
   }
 };

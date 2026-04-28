@@ -4,6 +4,7 @@ import toast from 'react-hot-toast';
 
 const usePayroll = () => {
   const [payrollData, setPayrollData] = useState(null);
+  const [payrollHistory, setPayrollHistory] = useState([]);
   const [loading, setLoading] = useState(false);
   const [processing, setProcessing] = useState(false);
   const [error, setError] = useState(null);
@@ -51,6 +52,15 @@ const usePayroll = () => {
     }
   };
 
+  const fetchPayrollHistory = async () => {
+    try {
+      const response = await api.get('/payroll/history');
+      setPayrollHistory(response.data || []);
+    } catch (err) {
+      console.error('Failed to fetch payroll history:', err);
+    }
+  };
+
   const processMonthlyPayroll = async () => {
     setProcessing(true);
     try {
@@ -66,11 +76,65 @@ const usePayroll = () => {
 
   const updateEmployeeStatus = async (payrollId, employeeId, status) => {
     try {
-      await api.put(`/payroll/${payrollId}/employee/${employeeId}`, { status });
-      toast.success('Status updated!');
-      await fetchCurrentPayroll();
+      const response = await api.put(`/payroll/${payrollId}/employee/${employeeId}`, { status });
+      setPayrollData(response.data);
+      toast.success(status === 'Paid' ? '✅ Payment marked as Paid!' : 'Status updated!');
     } catch (err) {
-      toast.error(err.response?.data?.msg || err.response?.data?.message || 'Failed to update employee status');
+      toast.error(err.response?.data?.msg || err.response?.data?.message || 'Failed to update status');
+    }
+  };
+
+  const updateEmployeeDeduction = async (payrollId, employeeId, deductions) => {
+    try {
+      const response = await api.put(
+        `/payroll/${payrollId}/employee/${employeeId}/deduction`,
+        { deductions: parseFloat(deductions) }
+      );
+      setPayrollData(response.data);
+      toast.success('Deduction updated!');
+    } catch (err) {
+      toast.error(err.response?.data?.msg || err.response?.data?.message || 'Failed to update deduction');
+    }
+  };
+
+  const updateEmployeeBonus = async (payrollId, employeeId, bonus) => {
+    try {
+      const response = await api.put(
+        `/payroll/${payrollId}/employee/${employeeId}/bonus`,
+        { bonus: parseFloat(bonus) }
+      );
+      setPayrollData(response.data);
+      toast.success('Bonus updated!');
+    } catch (err) {
+      toast.error(err.response?.data?.msg || err.response?.data?.message || 'Failed to update bonus');
+    }
+  };
+
+  const updateEmployeeSalary = async (payrollId, employeeId, baseSalary) => {
+    try {
+      const response = await api.put(
+        `/payroll/${payrollId}/employee/${employeeId}/salary`,
+        { baseSalary: parseFloat(baseSalary) }
+      );
+      setPayrollData(response.data);
+      toast.success('Salary updated!');
+    } catch (err) {
+      toast.error(err.response?.data?.msg || err.response?.data?.message || 'Failed to update salary');
+    }
+  };
+
+  const updateEmployeePayrollFields = async (payrollId, employeeId, fields) => {
+    try {
+      const response = await api.put(
+        `/payroll/${payrollId}/employee/${employeeId}/fields`,
+        fields
+      );
+      setPayrollData(response.data);
+      toast.success('Employee payroll updated!');
+      return response.data;
+    } catch (err) {
+      toast.error(err.response?.data?.msg || err.response?.data?.message || 'Failed to update fields');
+      throw err;
     }
   };
 
@@ -86,8 +150,15 @@ const usePayroll = () => {
     fetchCurrentPayroll,
     processMonthlyPayroll,
     updateEmployeeStatus,
+    updateEmployeeDeduction,
+    updateEmployeeBonus,
+    updateEmployeeSalary,
+    updateEmployeePayrollFields,
+    fetchPayrollHistory,
+    payrollHistory,
     getDefaultPayroll,
   };
 };
 
 export default usePayroll;
+
