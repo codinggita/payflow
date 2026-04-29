@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import api from '../config/axios';
 import toast from 'react-hot-toast';
 
-const usePayroll = () => {
+const usePayroll = (month, year) => {
   const [payrollData, setPayrollData] = useState(null);
   const [payrollHistory, setPayrollHistory] = useState([]);
   const [loading, setLoading] = useState(false);
@@ -11,10 +11,11 @@ const usePayroll = () => {
 
   const getDefaultPayroll = () => {
     const now = new Date();
-    const month = now.toLocaleString('en-US', { month: 'long', year: 'numeric' });
+    const currentMonth = now.toLocaleString('en-US', { month: 'long' });
     const nextPayCycle = new Date(now.getFullYear(), now.getMonth() + 1, 15);
     return {
-      month,
+      month: currentMonth,
+      year: now.getFullYear(),
       totalSalary: 0,
       totalDeductions: 0,
       netPayroll: 0,
@@ -24,43 +25,19 @@ const usePayroll = () => {
     };
   };
 
-  const fetchCurrentPayroll = async () => {
-    setLoading(true);
-    setError(null);
-    try {
-      const response = await api.get('/payroll/current');
-      if (response.data) {
-        const defaultPayroll = getDefaultPayroll();
-        const payroll = {
-          ...defaultPayroll,
-          ...response.data,
-          employees: response.data.employees || defaultPayroll.employees,
-        };
-        setPayrollData(payroll);
-      } else {
-        setPayrollData(getDefaultPayroll());
-      }
-    } catch (err) {
-      if (err.response?.status === 404) {
-        setPayrollData(getDefaultPayroll());
-      } else {
-        setError(err.message || 'Failed to fetch payroll');
-        toast.error('Failed to load payroll data');
-      }
-    } finally {
-      setLoading(false);
-    }
-  };
+  const fetchPayrollByMonth = async (m, y) => {
+    const targetMonth = m || month;
+    const targetYear = y || year;
+    if (!targetMonth || !targetYear) return;
 
-  const fetchPayrollByMonth = async (month, year) => {
     setLoading(true);
     setError(null);
     try {
-      const response = await api.get(`/payroll/filter?month=${month}&year=${year}`);
+      const response = await api.get(`/payroll/filter?month=${targetMonth}&year=${targetYear}`);
       setPayrollData(response.data);
     } catch (err) {
       if (err.response?.status === 404) {
-        setPayrollData(null); // Or getDefaultPayroll()
+        setPayrollData(null);
       } else {
         toast.error('Failed to fetch payroll for selected month');
       }
@@ -84,6 +61,7 @@ const usePayroll = () => {
       const response = await api.post('/payroll/process', period);
       setPayrollData(response.data);
       toast.success(`Payroll for ${response.data.month} processed successfully!`);
+      fetchPayrollHistory(); // Refresh history
     } catch (err) {
       toast.error(err.response?.data?.msg || err.response?.data?.message || 'Failed to process payroll');
     } finally {
@@ -156,15 +134,17 @@ const usePayroll = () => {
   };
 
   useEffect(() => {
-    fetchCurrentPayroll();
-  }, []);
+    if (month && year) {
+      fetchPayrollByMonth(month, year);
+      fetchPayrollHistory();
+    }
+  }, [month, year]);
 
   return {
     payrollData,
     loading,
     processing,
     error,
-    fetchCurrentPayroll,
     processMonthlyPayroll,
     updateEmployeeStatus,
     updateEmployeeDeduction,
@@ -179,4 +159,3 @@ const usePayroll = () => {
 };
 
 export default usePayroll;
-

@@ -12,7 +12,6 @@ import {
   Pencil,
   Check,
   X,
-  FileBarChart,
   Calendar,
   Search,
   ChevronDown,
@@ -47,6 +46,11 @@ const YEARS = [2024, 2025, 2026];
 
 /* ─── Main Component ─────────────────────────────────────── */
 const Payroll = () => {
+  const now = new Date();
+  const [selectedMonth, setSelectedMonth] = useState(MONTHS[now.getMonth()]);
+  const [selectedYear, setSelectedYear] = useState(now.getFullYear());
+  const [searchTerm, setSearchTerm] = useState('');
+
   const {
     payrollData,
     loading,
@@ -58,12 +62,7 @@ const Payroll = () => {
     fetchPayrollHistory,
     payrollHistory,
     getDefaultPayroll,
-  } = usePayroll();
-
-  const now = new Date();
-  const [selectedMonth, setSelectedMonth] = useState(MONTHS[now.getMonth()]);
-  const [selectedYear, setSelectedYear] = useState(now.getFullYear());
-  const [searchTerm, setSearchTerm] = useState('');
+  } = usePayroll(selectedMonth, selectedYear);
 
   // Local data or default
   const data = payrollData || {
@@ -86,13 +85,7 @@ const Payroll = () => {
   const [isModalSaving, setIsModalSaving] = useState(false);
   const [payingId, setPayingId]   = useState(null);
 
-  useEffect(() => {
-    fetchPayrollByMonth(selectedMonth, selectedYear);
-    fetchPayrollHistory();
-  }, [selectedMonth, selectedYear]);
-
   const handleProcessPayroll = async () => {
-    // We pass selectedMonth/Year to process specifically for them
     await processMonthlyPayroll({ month: selectedMonth, year: selectedYear });
     fetchPayrollHistory();
   };
@@ -168,7 +161,6 @@ const Payroll = () => {
               </div>
 
               <div className="flex flex-wrap items-center gap-3">
-                {/* Month Selector */}
                 <div className="relative group">
                   <select 
                     value={selectedMonth}
@@ -180,7 +172,6 @@ const Payroll = () => {
                   <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none" size={16} />
                 </div>
 
-                {/* Year Selector */}
                 <div className="relative group">
                   <select 
                     value={selectedYear}
@@ -203,7 +194,6 @@ const Payroll = () => {
               </div>
             </div>
 
-            {/* Search & Actions */}
             <div className="flex flex-col sm:flex-row gap-4 items-center">
               <div className="relative flex-1 group">
                 <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 group-focus-within:text-indigo-500 transition-colors" size={18} />
@@ -277,7 +267,7 @@ const Payroll = () => {
 
               {/* ── Main Table ── */}
               <div className="bg-white rounded-[2.5rem] shadow-sm border border-slate-100 overflow-hidden mb-8">
-                <div className="overflow-x-auto">
+                <div className="overflow-x-auto hide-scrollbar">
                   <table className="w-full text-left border-collapse">
                     <thead>
                       <tr className="border-b border-slate-50">
@@ -349,66 +339,64 @@ const Payroll = () => {
             </>
           )}
         </div>
+      </div>
 
+      {/* ── Bottom Section: Expanded Insights & History ── */}
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mt-8">
+        
+        {/* Cycle Info */}
+        <div className="bg-indigo-600 rounded-[2.5rem] p-8 text-white shadow-xl shadow-indigo-600/20 flex flex-col justify-between min-h-[220px]">
+          <div>
+            <p className="text-[10px] font-bold text-indigo-200 uppercase tracking-widest mb-3">Next Payroll Cycle</p>
+            <h3 className="text-4xl font-bold font-outfit mb-2">{formatDate(data.nextPayCycle)}</h3>
+            <p className="text-xs text-indigo-100 opacity-80 leading-relaxed">
+              Payments will be automatically initiated for all pending employees on this date.
+            </p>
+          </div>
+          <div className="flex items-center gap-2 mt-8 text-[10px] font-bold uppercase tracking-widest bg-white/10 w-fit px-4 py-2 rounded-lg backdrop-blur-sm">
+            <ShieldCheck size={14} />
+            Compliance Verified
+          </div>
         </div>
 
-        {/* ── Bottom Section: Expanded Insights & History ── */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-          
-          {/* Cycle Info */}
-          <div className="bg-indigo-600 rounded-[2.5rem] p-8 text-white shadow-xl shadow-indigo-600/20 flex flex-col justify-between min-h-[220px]">
-            <div>
-              <p className="text-[10px] font-bold text-indigo-200 uppercase tracking-widest mb-3">Next Payroll Cycle</p>
-              <h3 className="text-4xl font-bold font-outfit mb-2">{formatDate(data.nextPayCycle)}</h3>
-              <p className="text-xs text-indigo-100 opacity-80 leading-relaxed">
-                Payments will be automatically initiated for all pending employees on this date.
-              </p>
-            </div>
-            <div className="flex items-center gap-2 mt-8 text-[10px] font-bold uppercase tracking-widest bg-white/10 w-fit px-4 py-2 rounded-lg backdrop-blur-sm">
-              <ShieldCheck size={14} />
-              Compliance Verified
-            </div>
+        {/* Compliance Card */}
+        <div className="bg-slate-50 rounded-[2.5rem] p-8 border border-slate-100 flex flex-col justify-between">
+          <div>
+            <h4 className="text-sm font-bold text-slate-800 mb-3 flex items-center gap-2">
+              <ShieldCheck size={16} className="text-emerald-500" />
+              Tax Compliance
+            </h4>
+            <p className="text-xs text-slate-500 leading-relaxed mb-6">
+              Tax filings for Q1 2026 are ready for submission. Regional standards applied.
+            </p>
           </div>
+          <button className="flex items-center gap-2 text-[10px] font-bold text-indigo-600 uppercase tracking-widest hover:translate-x-1 transition-transform">
+            Review Report <ArrowRight size={14} />
+          </button>
+        </div>
 
-          {/* Compliance Card */}
-          <div className="bg-slate-50 rounded-[2.5rem] p-8 border border-slate-100 flex flex-col justify-between">
-            <div>
-              <h4 className="text-sm font-bold text-slate-800 mb-3 flex items-center gap-2">
-                <ShieldCheck size={16} className="text-emerald-500" />
-                Tax Compliance
-              </h4>
-              <p className="text-xs text-slate-500 leading-relaxed mb-6">
-                Tax filings for Q1 2026 are ready for submission. Regional standards applied.
-              </p>
-            </div>
-            <button className="flex items-center gap-2 text-[10px] font-bold text-indigo-600 uppercase tracking-widest hover:translate-x-1 transition-transform">
-              Review Report <ArrowRight size={14} />
-            </button>
-          </div>
-
-          {/* History Timeline - Now at the bottom */}
-          <div className="bg-white rounded-[2.5rem] p-8 shadow-sm border border-slate-100">
-            <h3 className="text-lg font-bold text-slate-800 font-outfit mb-6 flex items-center gap-2">
-              <Clock size={20} className="text-indigo-500" />
-              Recent Cycles
-            </h3>
-            <div className="space-y-6 relative before:absolute before:left-[11px] before:top-2 before:bottom-2 before:w-px before:bg-slate-100">
-              {payrollHistory.slice(0, 3).map((h, i) => (
-                <div key={h._id} className="relative pl-8 group">
-                  <div className={`absolute left-0 top-1.5 w-[23px] h-[23px] rounded-full border-4 border-white shadow-sm transition-colors ${i === 0 ? 'bg-indigo-500' : 'bg-slate-200'}`} />
-                  <div className="flex justify-between items-start">
-                    <div>
-                      <p className="text-xs font-bold text-slate-800 mb-0.5">{h.month} {h.year}</p>
-                      <p className="text-[9px] text-slate-400 font-bold uppercase tracking-wider">{h.status}</p>
-                    </div>
-                    <p className="text-[10px] font-bold text-indigo-600">{formatCurrency(h.netPayroll)}</p>
+        {/* History Timeline */}
+        <div className="bg-white rounded-[2.5rem] p-8 shadow-sm border border-slate-100">
+          <h3 className="text-lg font-bold text-slate-800 font-outfit mb-6 flex items-center gap-2">
+            <Clock size={20} className="text-indigo-500" />
+            Recent Cycles
+          </h3>
+          <div className="space-y-6 relative before:absolute before:left-[11px] before:top-2 before:bottom-2 before:w-px before:bg-slate-100">
+            {payrollHistory.slice(0, 3).map((h, i) => (
+              <div key={h._id} className="relative pl-8 group">
+                <div className={`absolute left-0 top-1.5 w-[23px] h-[23px] rounded-full border-4 border-white shadow-sm transition-colors ${i === 0 ? 'bg-indigo-500' : 'bg-slate-200'}`} />
+                <div className="flex justify-between items-start">
+                  <div>
+                    <p className="text-xs font-bold text-slate-800 mb-0.5">{h.month} {h.year}</p>
+                    <p className="text-[9px] text-slate-400 font-bold uppercase tracking-wider">{h.status}</p>
                   </div>
+                  <p className="text-[10px] font-bold text-indigo-600">{formatCurrency(h.netPayroll)}</p>
                 </div>
-              ))}
-            </div>
+              </div>
+            ))}
           </div>
-
         </div>
+      </div>
 
       {/* ── Edit Modal ── */}
       <AnimatePresence>

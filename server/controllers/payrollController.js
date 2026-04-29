@@ -18,7 +18,7 @@ exports.processPayroll = async (req, res) => {
     let totalBonus = 0;
 
     const currentDate = new Date();
-    const currentMonth = month || currentDate.toLocaleString('en-US', { month: 'long', year: 'numeric' });
+    const currentMonth = month || currentDate.toLocaleString('en-US', { month: 'long' });
     const currentYear = year || currentDate.getFullYear();
 
     // Map employees using their individual taxPercent

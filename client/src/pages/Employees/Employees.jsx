@@ -7,9 +7,11 @@ import {
 } from 'lucide-react';
 import Layout from '../../components/Layout/Layout';
 import useEmployees from '../../hooks/useEmployees';
+import useDashboard from '../../hooks/useDashboard';
 
 const Employees = () => {
   const { employees, pagination, loading, fetchEmployees, removeEmployee } = useEmployees();
+  const { stats, loading: statsLoading } = useDashboard();
   const [filters, setFilters] = useState({ search: '', department: '', status: '', page: 1 });
 
   // Debounced fetch
@@ -25,6 +27,9 @@ const Employees = () => {
       removeEmployee(id);
     }
   };
+
+  const formatCurrency = (val) => 
+    new Intl.NumberFormat('en-IN', { style: 'currency', currency: 'INR', maximumFractionDigits: 0 }).format(val);
 
   return (
     <Layout>
@@ -135,7 +140,7 @@ const Employees = () => {
               
               <div className="flex-1">
                 <p className="text-base font-bold text-slate-800">
-                  ${emp.baseSalary?.toLocaleString()}
+                  {formatCurrency(emp.baseSalary)}
                 </p>
                 <p className="text-[9px] font-bold text-slate-400 uppercase tracking-widest mt-1">ANNUAL SALARY</p>
               </div>
@@ -204,12 +209,17 @@ const Employees = () => {
         >
           <div>
             <h3 className="text-[10px] font-bold text-indigo-600 uppercase tracking-widest mb-4">TEAM VITALITY</h3>
-            <div className="text-4xl font-bold text-slate-800 font-outfit mb-2">98%</div>
+            <div className="text-4xl font-bold text-slate-800 font-outfit mb-2">
+              {statsLoading ? '...' : `${stats?.retentionRate || 0}%`}
+            </div>
             <p className="text-xs text-slate-500 leading-relaxed max-w-[200px]">Current employee retention rate across all atelier departments.</p>
           </div>
           <div className="mt-8">
             <div className="w-full h-2.5 bg-indigo-50 rounded-full overflow-hidden">
-              <div className="h-full bg-indigo-500 rounded-full w-[98%]"></div>
+              <div 
+                className="h-full bg-indigo-500 rounded-full transition-all duration-1000" 
+                style={{ width: `${stats?.retentionRate || 0}%` }}
+              ></div>
             </div>
           </div>
         </motion.div>
@@ -222,17 +232,22 @@ const Employees = () => {
         >
           <div>
             <h3 className="text-[10px] font-bold text-indigo-600 uppercase tracking-widest mb-4">PENDING HIRES</h3>
-            <div className="text-4xl font-bold text-slate-800 font-outfit mb-2">12</div>
+            <div className="text-4xl font-bold text-slate-800 font-outfit mb-2">
+              {statsLoading ? '...' : stats?.onboardingCount || 0}
+            </div>
             <p className="text-xs text-slate-500 leading-relaxed max-w-[200px]">Offers extended for the Engineering and Design expansion.</p>
           </div>
           <div className="mt-8 flex items-center">
             <div className="flex -space-x-3">
-              <img src="https://api.dicebear.com/7.x/avataaars/svg?seed=p1" alt="Avatar" className="w-10 h-10 rounded-full border-2 border-white bg-slate-100" />
-              <img src="https://api.dicebear.com/7.x/avataaars/svg?seed=p2" alt="Avatar" className="w-10 h-10 rounded-full border-2 border-white bg-slate-200" />
-              <img src="https://api.dicebear.com/7.x/avataaars/svg?seed=p3" alt="Avatar" className="w-10 h-10 rounded-full border-2 border-white bg-slate-300" />
-              <div className="w-10 h-10 rounded-full border-2 border-white bg-indigo-500 text-white flex items-center justify-center text-[10px] font-bold z-10">
-                +9
-              </div>
+              {[...Array(Math.min(3, stats?.onboardingCount || 0))].map((_, i) => (
+                <img key={i} src={`https://api.dicebear.com/7.x/avataaars/svg?seed=p${i}`} alt="Avatar" className="w-10 h-10 rounded-full border-2 border-white bg-slate-100" />
+              ))}
+              {stats?.onboardingCount > 3 && (
+                <div className="w-10 h-10 rounded-full border-2 border-white bg-indigo-500 text-white flex items-center justify-center text-[10px] font-bold z-10">
+                  +{stats.onboardingCount - 3}
+                </div>
+              )}
+              {stats?.onboardingCount === 0 && <p className="text-[10px] font-bold text-slate-300 uppercase tracking-widest">No pending hires</p>}
             </div>
           </div>
         </motion.div>
@@ -245,12 +260,14 @@ const Employees = () => {
         >
           <div>
             <h3 className="text-[10px] font-bold text-indigo-600 uppercase tracking-widest mb-4">TOTAL PAYROLL</h3>
-            <div className="text-4xl font-bold text-slate-800 font-outfit mb-2">$4.2M</div>
+            <div className="text-4xl font-bold text-slate-800 font-outfit mb-2">
+              {statsLoading ? '...' : formatCurrency(stats?.totalPayroll || 0)}
+            </div>
             <p className="text-xs text-slate-500 leading-relaxed max-w-[200px]">Projected annual compensation for the current headcount.</p>
           </div>
           <div className="mt-8 flex items-center gap-2">
             <div className="flex items-center text-emerald-500 text-[10px] font-bold tracking-widest uppercase">
-              <TrendingUp size={14} className="mr-1" /> +12% VS LAST YEAR
+              <TrendingUp size={14} className="mr-1" /> +{stats?.growth || 0}% VS LAST YEAR
             </div>
           </div>
         </motion.div>

@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { getDashboardStats } from '../services/dashboardService';
 
-const useDashboard = () => {
+const useDashboard = (month, year) => {
   const [stats, setStats] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -9,7 +9,7 @@ const useDashboard = () => {
   const fetchStats = async () => {
     try {
       setLoading(true);
-      const data = await getDashboardStats();
+      const data = await getDashboardStats(month, year);
       setStats(data);
       setError(null);
     } catch (err) {
@@ -21,7 +21,7 @@ const useDashboard = () => {
 
   useEffect(() => {
     fetchStats();
-  }, []);
+  }, [month, year]);
 
   return { stats, loading, error, fetchStats };
 };

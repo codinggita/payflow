@@ -25,16 +25,25 @@ import Layout from '../../components/Layout/Layout';
 import useDashboard from '../../hooks/useDashboard';
 
 const Dashboard = () => {
-  const { stats, loading, error } = useDashboard();
+  const now = new Date();
+  const MONTHS = [
+    "January", "February", "March", "April", "May", "June",
+    "July", "August", "September", "October", "November", "December"
+  ];
+  const YEARS = [2024, 2025, 2026];
+
+  const [selectedMonth, setSelectedMonth] = useState(MONTHS[now.getMonth()]);
+  const [selectedYear, setSelectedYear] = useState(now.getFullYear());
+  const { stats, loading, error } = useDashboard(selectedMonth, selectedYear);
   const [timeRange, setTimeRange] = useState('6 MONTHS');
 
-  const formatCurrency = (value) => {
-    if (!value) return '$0';
-    if (value >= 1000) {
-      return `$${(value / 1000).toFixed(1)}k`;
-    }
-    return `$${value.toLocaleString()}`;
-  };
+  const formatCurrency = (amount) =>
+    new Intl.NumberFormat('en-IN', {
+      style: 'currency',
+      currency: 'INR',
+      minimumFractionDigits: 0,
+      maximumFractionDigits: 0,
+    }).format(amount || 0);
 
   if (loading || !stats) {
     return (
@@ -42,7 +51,7 @@ const Dashboard = () => {
         <div className="flex-1 flex flex-col items-center justify-center h-full min-h-[60vh]">
           <Loader2 className="w-10 h-10 text-indigo-500 animate-spin mb-4" />
           <h2 className="text-lg font-bold text-slate-700">Loading Dashboard...</h2>
-          <p className="text-sm text-slate-400">Aggregating payroll metrics</p>
+          <p className="text-sm text-slate-400">Aggregating payroll metrics for {selectedMonth} {selectedYear}</p>
         </div>
       </Layout>
     );
@@ -62,6 +71,43 @@ const Dashboard = () => {
 
   return (
     <Layout>
+      {/* Header with Selectors */}
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-6 mb-8">
+        <div>
+          <h1 className="text-3xl font-bold text-slate-800 font-outfit">Financial Dashboard</h1>
+          <p className="text-sm text-slate-500">Real-time insights across your atelier</p>
+        </div>
+        
+        <div className="flex items-center gap-3 bg-white p-2 rounded-2xl shadow-sm border border-slate-100">
+          <select 
+            value={selectedMonth} 
+            onChange={(e) => setSelectedMonth(e.target.value)}
+            className="bg-transparent text-sm font-bold text-slate-600 px-3 py-1.5 focus:outline-none cursor-pointer"
+          >
+            {MONTHS.map(m => <option key={m} value={m}>{m}</option>)}
+          </select>
+          <div className="w-px h-6 bg-slate-100"></div>
+          <select 
+            value={selectedYear} 
+            onChange={(e) => setSelectedYear(parseInt(e.target.value))}
+            className="bg-transparent text-sm font-bold text-slate-600 px-3 py-1.5 focus:outline-none cursor-pointer"
+          >
+            {YEARS.map(y => <option key={y} value={y}>{y}</option>)}
+          </select>
+          {stats.isProcessed ? (
+            <div className="ml-2 px-3 py-1 bg-emerald-50 text-emerald-600 rounded-full text-[10px] font-bold tracking-widest uppercase flex items-center gap-1.5">
+              <div className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
+              Processed
+            </div>
+          ) : (
+            <div className="ml-2 px-3 py-1 bg-amber-50 text-amber-600 rounded-full text-[10px] font-bold tracking-widest uppercase flex items-center gap-1.5">
+              <div className="w-1.5 h-1.5 rounded-full bg-amber-500" />
+              Projected
+            </div>
+          )}
+        </div>
+      </div>
+
       {/* Top Cards Row */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
             {/* Primary Stat Card */}
@@ -97,8 +143,8 @@ const Dashboard = () => {
                     <Users size={20} />
                   </div>
                 </div>
-                <h3 className="text-2xl font-bold text-slate-800 font-outfit">{stats.totalEmployees.toLocaleString()}</h3>
-                <p className="text-[10px] text-slate-400 font-bold uppercase tracking-widest mt-1">Employees</p>
+                <h3 className="text-2xl font-bold text-slate-800 font-outfit">{stats.activeInPayroll.toLocaleString()}</h3>
+                <p className="text-[10px] text-slate-400 font-bold uppercase tracking-widest mt-1">Active Employees in Payroll</p>
               </motion.div>
 
               {/* Card 3 */}
@@ -113,13 +159,13 @@ const Dashboard = () => {
                   <div className="p-2 bg-orange-50 text-orange-500 rounded-xl">
                     <Clock size={20} />
                   </div>
-                  {stats.pendingPayments > 0 && (
+                  {stats.onboardingCount > 0 && (
                     <div className="bg-orange-100 text-orange-600 px-2.5 py-1 rounded-full text-[10px] font-bold tracking-wider">
                       URGENT
                     </div>
                   )}
                 </div>
-                <h3 className="text-2xl font-bold text-slate-800 font-outfit relative z-10">{stats.pendingPayments}</h3>
+                <h3 className="text-2xl font-bold text-slate-800 font-outfit relative z-10">{stats.onboardingCount}</h3>
                 <p className="text-[10px] text-slate-400 font-bold uppercase tracking-widest mt-1 relative z-10">Pending Onboarding</p>
               </motion.div>
 
@@ -136,7 +182,7 @@ const Dashboard = () => {
                   </div>
                   <div>
                     <h3 className="text-lg font-bold text-slate-800">{formatCurrency(stats.taxOverview)}</h3>
-                    <p className="text-[10px] text-slate-400 font-bold uppercase tracking-widest">Tax Overview (Total Base)</p>
+                    <p className="text-[10px] text-slate-400 font-bold uppercase tracking-widest">Total Tax & Deductions</p>
                   </div>
                 </div>
                 <ChevronRight className="text-slate-300" size={20} />
