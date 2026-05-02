@@ -1,357 +1,215 @@
 # 💸 PayFlow
+
 ### Automate Salaries. Eliminate Errors. Simplify Payroll.
 
-![React](https://img.shields.io/badge/React-18+-61DAFB?style=for-the-badge&logo=react&logoColor=black)
-![Vite](https://img.shields.io/badge/Vite-646CFF?style=for-the-badge&logo=vite&logoColor=white)
-![TailwindCSS](https://img.shields.io/badge/Tailwind_CSS-38B2AC?style=for-the-badge&logo=tailwind-css&logoColor=white)
-![MUI](https://img.shields.io/badge/MUI-007FFF?style=for-the-badge&logo=mui&logoColor=white)
-![Node.js](https://img.shields.io/badge/Node.js-339933?style=for-the-badge&logo=nodedotjs&logoColor=white)
-![MongoDB](https://img.shields.io/badge/MongoDB-47A248?style=for-the-badge&logo=mongodb&logoColor=white)
-![Firebase](https://img.shields.io/badge/Firebase-FFCA28?style=for-the-badge&logo=firebase&logoColor=black)
+![React](https://img.shields.io/badge/React-18+-61DAFB?style=for-the-badge\&logo=react\&logoColor=black)
+![Vite](https://img.shields.io/badge/Vite-646CFF?style=for-the-badge\&logo=vite\&logoColor=white)
+![TailwindCSS](https://img.shields.io/badge/Tailwind_CSS-38B2AC?style=for-the-badge\&logo=tailwind-css\&logoColor=white)
+![Node.js](https://img.shields.io/badge/Node.js-339933?style=for-the-badge\&logo=nodedotjs\&logoColor=white)
+![MongoDB](https://img.shields.io/badge/MongoDB-47A248?style=for-the-badge\&logo=mongodb\&logoColor=white)
 
 ---
 
-## 📖 About the Project
+# 🚀 Full Stack Payroll Management System
 
-**PayFlow** is a modern, full-stack payroll management system designed to simplify and automate salary processing for small teams and organizations. Many small businesses still rely on manual methods — spreadsheets, paper calculations, and disconnected tools — which lead to errors, inefficiencies, and a lack of transparency.
+PayFlow is a modern **Payroll Management Web Application** built using the **MERN Stack (MongoDB, Express.js, React.js, Node.js)** to automate salary processing, employee management, deductions, reports, and monthly payroll operations.
 
-PayFlow replaces that chaos with a centralized, intelligent, and user-friendly platform. From onboarding employees to generating payslips, everything happens in one place with complete accuracy and zero manual effort.
-https://payflow-drab.vercel.app/
----
-
-## ❗ Problem Statement
-
-Small teams and businesses face critical challenges in managing payroll:
-
-| Challenge | Impact |
-|---|---|
-| Manual salary calculations | High risk of costly errors |
-| No centralized employee data | Inconsistency across records |
-| Time-consuming processes | Reduced team productivity |
-| Tax & deduction confusion | Compliance risks |
-| No payslip automation | Poor employee transparency |
-
-> There is no simple, affordable, and automated payroll solution built specifically for small teams — **PayFlow solves exactly that.**
+This project replaces manual spreadsheet payroll systems with a secure, scalable, and user-friendly digital solution.
 
 ---
 
-## 💡 Our Solution
+## 🔗 Important Links
 
-PayFlow provides a unified payroll automation platform that delivers:
+| Resource                 | Link                                                                                               |
+| ------------------------ | -------------------------------------------------------------------------------------------------- |
+| 🌐 Live Project          | https://payflow-vishvpatel.vercel.app/                                                             |
+| ⚙️ Backend API           | https://payflow-1jut.onrender.com                                                                  |
+| 📄 Postman Documentation | https://documenter.getpostman.com/view/50841229/2sBXqKoKpt                                         |
+| 🎨 Figma Design          | https://www.figma.com/design/ZAZZlFtavEfqOBHK8yzAF8/Untitled?node-id=292-3074&t=LvuFpUXqeEa6MKn8-1 |
+| 💻 GitHub Repository     | https://github.com/vishvpatel210/payflow                                                           |
+| 🔀 Official PRs          | https://github.com/codinggita/payflow/pulls?q=is%3Apr+is%3Aclosed                                  |
+| 🎥 YouTube Demo          | https://www.youtube.com/watch?v=coXCeH2oTFk&t=6s                                                   |
 
-- ✅ **Automated salary calculation** with configurable deductions
-- ✅ **Centralized employee management** replacing Excel sheets
-- ✅ **Real-time payroll processing** with instant net pay calculation
-- ✅ **Auto-generated payslips** with full earnings/deductions breakdown
-- ✅ **Tax & PF configuration** with live salary preview
-- ✅ **Analytics dashboard** for financial insights and trends
+---
+
+## 📖 Problem Statement
+
+Many businesses still manage salaries manually using Excel sheets or disconnected tools. This creates:
+
+* Payroll calculation mistakes
+* Delayed salary payments
+* Poor employee record management
+* Difficult month-wise tracking
+* Time-consuming HR operations
+* No real-time reports or analytics
+
+---
+
+## 💡 Solution
+
+PayFlow provides one centralized payroll platform where companies can:
+
+* Manage employees easily
+* Process monthly payroll instantly
+* Calculate tax, bonus, and deductions automatically
+* Track payment status month-wise
+* View analytics and reports
+* Save time and reduce manual errors
 
 ---
 
 ## ✨ Key Features
 
 ### 🔐 Authentication
-- Google Sign-In via Firebase
-- Role-based access (Admin / Employee)
-- Secure JWT session management
 
-### 🏠 Dashboard
-- Monthly payroll expenditure overview
-- Total employees & pending payments at a glance
-- Payroll trend graph (6 months / 1 year)
-- Department salary split (donut chart)
-- Recent activity feed
+* Secure Login & Signup
+* JWT Authentication
+* Protected Routes
 
 ### 👥 Employee Management
-- Add & edit employee profiles with avatar upload
-- Store role, department, base salary, joining date
-- Status tracking: Active, Onboarding, Leave
-- Search & filter by name, department, status
-- Paginated employee directory
 
-### 💰 Payroll Processing
-- Automated salary calculation per employee
-- Handles: base salary, bonus, tax, PF deductions
-- Real-time net pay calculation
-- Status tracking: Paid, Pending, Error
-- One-click "Process Monthly Payroll"
-- Compliance check with regulatory alerts
+* Add Employee
+* Edit Employee
+* Delete Employee
+* Search & Filter Employees
 
-### 📄 Payslip Generator
-- Auto-generated payslips per pay cycle
-- Detailed earnings & deductions breakdown
-- Net pay with payment destination info
-- Download as PDF
-- Print support
+### 💰 Payroll Module
 
-### ⚙️ Tax & Salary Configuration
-- Configure performance bonus (fixed or percentage)
-- Set income tax (%) with toggle enable/disable
-- Set Provident Fund (PF %) 
-- Other miscellaneous deductions
-- **Live salary breakdown preview** in real-time
-- Jurisdiction / country selector
-- Compliance status indicator
+* Process Monthly Payroll
+* Auto Salary Calculation
+* Tax & Deduction Handling
+* Payment Status (Paid / Pending)
+* Month-wise Payroll Records
 
-### 📊 Reports & Analytics
-- Total payroll, employees, avg salary, total deductions
-- Payroll trend chart (monthly / quarterly)
-- Expense breakdown (salaries, taxes, benefits)
-- Filter by date range, department, paid status
-- Recent payroll history table
-- Export report to PDF
+### 📊 Reports
+
+* Payroll Trends
+* Expense Breakdown
+* Total Employees
+* Total Salary Reports
+
+### ⚙️ Settings & Configuration
+
+* Tax Configuration
+* Bonus Settings
+* Salary Breakdown Preview
+
+### 📈 SEO
+
+* React Helmet
+* robots.txt
+* sitemap.xml
+* Google Search Console
 
 ---
 
-## 🛠 Tech Stack
+## 💻 Tech Stack
 
-### Frontend
-| Technology | Purpose |
-|---|---|
-| React 18 + Vite | UI Framework |
-| Tailwind CSS | Utility-first styling |
-| Material UI (MUI) | Component library |
-| React Router v6 | Client-side navigation |
-| Redux Toolkit | Global state management |
-| Recharts | Charts & data visualization |
-| Formik + Yup | Form handling & validation |
-| jsPDF | Payslip PDF generation |
-| React Hot Toast | Notifications |
-
-### Backend
-| Technology | Purpose |
-|---|---|
-| Node.js | Runtime environment |
-| Express.js | REST API framework |
-| MongoDB + Mongoose | Database |
-| JWT | Authentication tokens |
-| Bcrypt | Password hashing |
-| Helmet | Security headers |
-
-### Integrations
-| Service | Purpose |
-|---|---|
-| Firebase / Google Auth | Social login |
-| jsPDF | Payslip download |
+* **Frontend:** React.js, Vite, Tailwind CSS, Axios
+* **Backend:** Node.js, Express.js
+* **Database:** MongoDB, Mongoose
+* **Authentication:** JWT
+* **Deployment:** Vercel, Render
+* **Design:** Figma
+* **API Testing:** Postman
+* **SEO:** React Helmet, robots.txt, sitemap.xml
 
 ---
 
-## 📂 Project Structure
+## 📂 Folder Structure
 
-```
+```bash
 payflow/
-├── client/                        # Frontend application
+│── README.md
+│
+├── client/
 │   ├── public/
+│   │   ├── favicon.ico
+│   │   ├── robots.txt
+│   │   └── sitemap.xml
+│   │
 │   ├── src/
-│   │   ├── assets/                # Images, icons, fonts
+│   │   ├── assets/
 │   │   ├── components/
-│   │   │   ├── common/            # Buttons, inputs, cards
-│   │   │   ├── layout/            # Sidebar, Navbar, Footer
-│   │   │   └── features/          # Feature-specific components
+│   │   │   ├── common/
+│   │   │   └── layout/
+│   │   ├── hooks/
 │   │   ├── pages/
-│   │   │   ├── Auth/              # Login / Register
-│   │   │   ├── Dashboard/         # Main dashboard
-│   │   │   ├── Employees/         # Employee directory & forms
-│   │   │   ├── Payroll/           # Payroll processing
-│   │   │   ├── Payslip/           # Payslip generator
-│   │   │   ├── Configuration/     # Tax & salary config
-│   │   │   └── Reports/           # Analytics & reports
-│   │   ├── redux/                 # Redux store & slices
-│   │   ├── hooks/                 # Custom React hooks
-│   │   ├── services/              # API calls (axios)
-│   │   ├── utils/                 # Helper functions
+│   │   │   ├── Auth/
+│   │   │   ├── Dashboard/
+│   │   │   ├── Employees/
+│   │   │   ├── Payroll/
+│   │   │   ├── Reports/
+│   │   │   ├── Configuration/
+│   │   │   └── Settings/
+│   │   ├── services/
+│   │   ├── utils/
 │   │   ├── App.jsx
 │   │   └── main.jsx
-│   ├── .env.example
-│   ├── index.html
-│   ├── tailwind.config.js
+│   │
+│   ├── package.json
 │   └── vite.config.js
 │
-├── server/                        # Backend application
+├── server/
 │   ├── config/
-│   │   └── db.js                  # MongoDB connection
-│   ├── controllers/               # Route logic
-│   ├── middlewares/               # Auth, validation
+│   ├── controllers/
+│   ├── middleware/
 │   ├── models/
-│   │   ├── User.js
-│   │   ├── Employee.js
-│   │   ├── Payroll.js
-│   │   └── Payslip.js
-│   ├── routes/                    # API routes
-│   ├── utils/                     # Helper functions
-│   ├── .env.example
-│   └── index.js
+│   ├── routes/
+│   ├── utils/
+│   ├── package.json
+│   └── server.js
 │
-├── .gitignore
-├── LICENSE
-└── README.md
+
 ```
 
 ---
 
-## ⚙️ Installation & Setup
+## 📸 Project Screenshots
 
-### Prerequisites
-- Node.js 18+
-- MongoDB Atlas account
-- Firebase project (for Google Auth)
-- npm or yarn
+### 🔐 Login Page
 
-### Clone the Repository
-```bash
-git clone https://github.com/vishvpatel210/payflow.git
-cd payflow
-```
+![Login](https://res.cloudinary.com/drj44l5df/image/upload/v1777728705/Screenshot_2026-05-02_185851_uzlpuz.png)
 
-### Backend Setup
-```bash
-cd server
-npm install
-npm run dev
-```
-Server runs on: `http://localhost:5000`
+### 📊 Dashboard
 
-### Frontend Setup
-```bash
-cd client
-npm install
-npm run dev
-```
-Client runs on: `http://localhost:5173`
+![Dashboard](https://res.cloudinary.com/drj44l5df/image/upload/v1777729321/Screenshot_2026-05-02_191034_mugrgs.png)
+
+### 👥 Employees Page
+
+![Employees](https://res.cloudinary.com/drj44l5df/image/upload/v1777729339/Screenshot_2026-05-02_191053_mcsmrj.png)
+
+### 💰 Payroll Page
+
+![Payroll](https://res.cloudinary.com/drj44l5df/image/upload/v1777729356/Screenshot_2026-05-02_191102_btfxx6.png)
+
+### 📈 Reports Page
+
+![Reports](https://res.cloudinary.com/drj44l5df/image/upload/v1777729404/Screenshot_2026-05-02_191111_b1wvhn.png)
+
+### ⚙️ Settings Page
+
+![Settings](https://res.cloudinary.com/drj44l5df/image/upload/v1777729463/Screenshot_2026-05-02_191122_afgjcw.png)
 
 ---
 
-## 🔐 Environment Variables
+## 📬 Contact
 
-### Server `.env`
-```env
-PORT=5000
-MONGODB_URI=your_mongodb_url
-JWT_SECRET=your_jwt_secret
-JWT_EXPIRE=30d
-```
-
-### Client `.env`
-```env
-VITE_API_URL=http://localhost:5000/api
-VITE_FIREBASE_API_KEY=your_firebase_key
-VITE_FIREBASE_AUTH_DOMAIN=your_project.firebaseapp.com
-VITE_FIREBASE_PROJECT_ID=your_project_id
-```
-
----
-
-## 🚀 API Endpoints
-
-| Method | Endpoint | Description |
-|---|---|---|
-| POST | `/api/auth/register` | User registration |
-| POST | `/api/auth/login` | User login |
-| GET | `/api/employees` | List all employees |
-| POST | `/api/employees` | Add new employee |
-| PUT | `/api/employees/:id` | Update employee |
-| DELETE | `/api/employees/:id` | Remove employee |
-| GET | `/api/payroll` | Get payroll records |
-| POST | `/api/payroll/process` | Process monthly payroll |
-| GET | `/api/payslip/:id` | Get payslip by ID |
-| GET | `/api/config` | Get tax configuration |
-| PUT | `/api/config` | Update tax/salary config |
-| GET | `/api/reports` | Get analytics data |
-
----
-
-## 🎨 UI/UX Design
-
-PayFlow follows a clean **modern SaaS design** with an indigo/purple color theme.
-
-| Element | Value |
-|---|---|
-| Primary Color | `#4F46E5` (Indigo) |
-| Background | `#F8FAFC` (Light) |
-| Sidebar | `#FFFFFF` with shadow |
-| Text Primary | `#111827` |
-| Text Secondary | `#6B7280` |
-| Success | `#10B981` (Green) |
-| Warning | `#F59E0B` (Amber) |
-| Error | `#EF4444` (Red) |
-
----
-
-## 🚀 Roadmap
-
-### Phase 1 — Foundation ✅
-- [x] Project setup (React + Vite + Tailwind + MUI)
-- [x] Authentication (Google + JWT)
-- [x] Sidebar layout & routing
-
-### Phase 2 — Core Features 🔄
-- [ ] Dashboard with charts
-- [ ] Employee management (CRUD)
-- [ ] Payroll processing engine
-
-### Phase 3 — Automation 📄
-- [ ] Payslip auto-generation
-- [ ] PDF download
-- [ ] Tax & salary configuration
-
-### Phase 4 — Analytics 📊
-- [ ] Reports & analytics page
-- [ ] Export functionality
-- [ ] Payroll history
-
-### Phase 5 — Polish 🚀
-- [ ] Email payslip delivery
-- [ ] Attendance integration
-- [ ] Multi-company support
-
----
-
-## 🤝 Contributing
-
-Contributions are welcome!
-
-```bash
-# Create a feature branch
-git checkout -b feat/your-feature-name
-
-# Commit your changes
-git add .
-git commit -m "feat: your feature description"
-
-# Push and raise PR
-git push origin feat/your-feature-name
-```
-
-**Coding Standards:**
-- Follow existing component structure
-- Write clean, readable code with comments
-- Test your changes before raising a PR
-- One feature per PR — keep PRs focused
-
----
-
-## 📜 License
-
-This project is for educational and hackathon purposes.
+| Platform    | Link                                     |
+| ----------- | ---------------------------------------- |
+| 💼 LinkedIn | https://www.linkedin.com/in/vishv-patel/ |
+| 💻 GitHub   | https://github.com/vishvpatel210         |
+| 🧠 LeetCode | https://leetcode.com/                    |
 
 ---
 
 ## 👨‍💻 Author
 
 **Vishv Patel**
-Full-Stack Developer | B.Tech Student
-Coding Gita
-
-| Skill | Technology |
-|---|---|
-| Frontend | React.js, Tailwind CSS, MUI |
-| Backend | Node.js, Express.js, MongoDB |
-| Tools | Vite, Firebase, Git |
-
-[![GitHub](https://img.shields.io/badge/GitHub-vishvpatel210-181717?style=for-the-badge&logo=github)](https://github.com/vishvpatel210/payflow)
+Full Stack Developer | MERN Stack Enthusiast
 
 ---
 
-> Built with ❤️ for small teams who deserve better than spreadsheets.
+## 🙌 Thank You
 
-[⬆ Back to Top](#-payflow)
+If you like this project, please star the repository and connect with me.
